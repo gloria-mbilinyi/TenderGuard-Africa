@@ -72,4 +72,6 @@ def test_document_report_requires_named_human_and_preserves_null_award(
     assert "Final award decision: NULL" in text
     assert "Alpha Technologies Ltd" in text
     assert "Beta Systems Ltd" in text
+    assert "SUBMISSION_DEADLINE" not in text
+    assert "metadata only; not evaluated" in text
     assert "page 1" not in text.lower() or "p.1" in text

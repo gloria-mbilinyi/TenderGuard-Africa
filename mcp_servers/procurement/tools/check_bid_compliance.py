@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -52,28 +51,6 @@ def check_bid_compliance_record(
     sources = [tender_source, bid_source]
 
     checks: list[dict[str, Any]] = []
-
-    deadline_raw = tender.get("submissionDeadline")
-    submitted_raw = bid.get("submitted_at")
-
-    if deadline_raw and submitted_raw:
-        deadline = datetime.fromisoformat(deadline_raw)
-        submitted_at = datetime.fromisoformat(submitted_raw)
-
-        passed = submitted_at <= deadline
-
-        checks.append(
-            {
-                "criterion": "SUBMISSION_DEADLINE",
-                "passed": passed,
-                "finding": (
-                    "Bid was submitted before or at the deadline."
-                    if passed
-                    else "Bid was submitted after the tender deadline."
-                ),
-                "sources": sources,
-            }
-        )
 
     submitted_documents = {
         document.get("code")

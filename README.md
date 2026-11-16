@@ -91,6 +91,11 @@ TenderGuard never automatically:
 - selects a winning bidder;
 - makes a final procurement decision.
 
+TenderGuard evaluates procurement evidence after the originating platform's submission
+stage. Submission deadlines and bid timestamps remain metadata only and do not affect
+compliance, supplier risk, or review priority. Portal acceptance is not verified by the
+presence of a bid record or PDF.
+
 ---
 
 ## Key Agentic Capabilities
@@ -500,7 +505,6 @@ Loads and normalizes tender records together with source information.
 
 Checks mandatory tender requirements including:
 
-- submission deadline;
 - mandatory documents;
 - eligibility requirements.
 
@@ -733,7 +737,6 @@ Price: TZS 47,000,000
 
 The synthetic record intentionally includes issues that allow the agent to demonstrate:
 
-- late-submission detection;
 - missing mandatory-document detection;
 - eligibility checking;
 - elevated price comparison;
@@ -746,7 +749,7 @@ The synthetic record intentionally includes issues that allow the agent to demon
 
 TenderGuard includes 10 documented evaluation tasks.
 
-Current evaluation results:
+Recorded evaluation results from the earlier prototype:
 
 ```text
 9 PASS
@@ -782,6 +785,10 @@ EVALS.md
 ```
 
 for the complete evaluation report.
+
+`EVALS.md` and `evals/results.json` are historical observations and are preserved.
+New evaluations exclude submission timeliness; the current regression tests verify
+that changing or removing bid timestamps does not change compliance or review priority.
 
 ---
 

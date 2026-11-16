@@ -329,13 +329,12 @@ class DocumentSupplierEvaluation(BaseModel):
     supplier_name: ExtractedField
     supplier_identifier: ExtractedField
     bid_reference: ExtractedField
-    submitted_at: ExtractedField
+    submitted_at: ExtractedField = Field(description="Source metadata only; not evaluated.")
     bid_price: ExtractedField
     currency: ExtractedField
     document_checks: list[RequirementFinding]
     eligibility_checks: list[RequirementFinding]
     technical_checks: list[RequirementFinding]
-    deadline_check: RequirementFinding
     financial_check: RequirementFinding
     missing_documents: list[str]
     risk_flags: list[DocumentRiskFlag]

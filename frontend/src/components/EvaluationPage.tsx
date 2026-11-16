@@ -98,7 +98,7 @@ export function EvaluationPage({ tenders, result, onEvaluate }: EvaluationPagePr
                     <div><div className="flex items-center gap-2"><h3 className="font-semibold">{bid.supplier_name}</h3>{active && <span className="grid size-5 place-items-center rounded-full bg-emerald-600 text-white"><Check className="size-3" /></span>}</div><p className="mt-1 font-mono text-xs text-slate-500">{bid.bid_id}</p></div>
                     <p className="text-sm font-semibold">{money(bid.amount, bid.currency)}</p>
                   </div>
-                  <div className="mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-2"><span>Submitted {date(bid.submitted_at)} EAT</span><span className="sm:text-right">{bid.submitted_document_codes.length} documents supplied</span></div>
+                  <div className="mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-2"><span>{bid.submitted_document_codes.length} documents supplied</span><span className="sm:text-right">Available for evaluation</span></div>
                 </label>
               );
             })}

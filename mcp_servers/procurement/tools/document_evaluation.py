@@ -1,7 +1,6 @@
 """Deterministic, page-cited evaluation of uploaded procurement PDFs."""
 
 import re
-from datetime import datetime
 from typing import Any
 
 from app.services.document_store import load_document_pages, load_workspace
@@ -99,21 +98,6 @@ def _parse_price(field: dict[str, Any]) -> tuple[float | None, str | None]:
     if not match:
         return None, None
     return float(match.group(2).replace(",", "")), match.group(1)
-
-
-def _date_value(field: dict[str, Any]) -> datetime | None:
-    value = field.get("value")
-    if not isinstance(value, str):
-        return None
-    match = re.search(r"\b(20\d{2}-\d{2}-\d{2})(?:[ T](\d{2}):(\d{2}))?", value)
-    if not match:
-        return None
-    try:
-        return datetime.fromisoformat(
-            f"{match.group(1)}T{match.group(2) or '00'}:{match.group(3) or '00'}:00"
-        )
-    except ValueError:
-        return None
 
 
 def extract_tender(workspace_id: str, document: dict[str, Any]) -> dict[str, Any]:
@@ -229,40 +213,6 @@ def evaluate_supplier(
         tender["technical_specifications"], technical_response, category="technical"
     )
 
-    deadline = _date_value(tender["submission_deadline"])
-    submission = _date_value(submitted_at)
-    deadline_sources = [
-        *tender["submission_deadline"]["sources"],
-        *submitted_at["sources"],
-    ]
-    if deadline is None or submission is None:
-        deadline_check = {
-            "code": "SUBMISSION_DEADLINE",
-            "requirement": "Submission must occur by the stated deadline.",
-            "status": "UNVERIFIED",
-            "finding": (
-                "Deadline compliance is unverified because a reliable deadline or "
-                "submission timestamp was not found in the PDFs."
-            ),
-            "sources": deadline_sources,
-        }
-    elif submission <= deadline:
-        deadline_check = {
-            "code": "SUBMISSION_DEADLINE",
-            "requirement": "Submission must occur by the stated deadline.",
-            "status": "VERIFIED_COMPLIANT",
-            "finding": "The PDF submission date is on or before the tender deadline.",
-            "sources": deadline_sources,
-        }
-    else:
-        deadline_check = {
-            "code": "SUBMISSION_DEADLINE",
-            "requirement": "Submission must occur by the stated deadline.",
-            "status": "VERIFIED_NONCOMPLIANT",
-            "finding": "The PDF submission date is after the stated tender deadline.",
-            "sources": deadline_sources,
-        }
-
     if price is None:
         financial_check = {
             "code": "BID_PRICE",
@@ -303,7 +253,6 @@ def evaluate_supplier(
         *document_checks,
         *eligibility_checks,
         *technical_checks,
-        deadline_check,
         financial_check,
     ]
     statuses = {item["status"] for item in all_findings}
@@ -326,7 +275,6 @@ def evaluate_supplier(
         "document_checks": document_checks,
         "eligibility_checks": eligibility_checks,
         "technical_checks": technical_checks,
-        "deadline_check": deadline_check,
         "financial_check": financial_check,
         "missing_documents": [
             item["code"] for item in document_checks if item["status"] == "MISSING_EVIDENCE"

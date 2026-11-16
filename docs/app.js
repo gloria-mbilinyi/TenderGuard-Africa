@@ -36,11 +36,6 @@ const bids = {
       className: "result-good",
       findings: [
         {
-          title: "Submission deadline",
-          detail: "Bid submitted before the tender deadline.",
-          source: "data/synthetic_bids/bid_alpha.json"
-        },
-        {
           title: "Mandatory documents",
           detail: "BID_FORM, BUSINESS_LICENSE and TAX_CLEARANCE are present.",
           source: "data/synthetic_bids/bid_alpha.json"
@@ -114,11 +109,6 @@ const bids = {
       className: "result-danger",
       findings: [
         {
-          title: "Late submission",
-          detail: "The bid was submitted after the tender deadline.",
-          source: "data/synthetic_bids/bid_beta.json"
-        },
-        {
           title: "Missing mandatory document",
           detail: "TAX_CLEARANCE is missing from the synthetic bid record.",
           source: "data/synthetic_bids/bid_beta.json"
@@ -180,7 +170,7 @@ const bids = {
       "The agent identified mandatory compliance failures, an elevated price observation, and a supplier-data inconsistency. These findings require human committee attention.",
 
     reportSummary:
-      "Beta Systems Ltd requires committee attention because the synthetic record contains a late submission, a missing TAX_CLEARANCE document, an unmet LOCAL_REGISTRATION requirement, an elevated price relative to historical awards, and a supplier identifier/name inconsistency."
+      "Beta Systems Ltd requires committee attention because the synthetic record contains a missing TAX_CLEARANCE document, an unmet LOCAL_REGISTRATION requirement, an elevated price relative to historical awards, and a supplier identifier/name inconsistency."
   }
 };
 
@@ -195,7 +185,7 @@ const workflowSteps = [
   },
   {
     title: "check_bid_compliance",
-    subtitle: "MCP checks deadline, mandatory documents and eligibility."
+    subtitle: "MCP checks mandatory documents and eligibility."
   },
   {
     title: "compare_prices",

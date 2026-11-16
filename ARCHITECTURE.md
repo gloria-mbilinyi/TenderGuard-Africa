@@ -171,7 +171,6 @@ check\_bid\_compliance
 
 Checks:
 
-\- submission deadline;
 
 \- mandatory documents;
 

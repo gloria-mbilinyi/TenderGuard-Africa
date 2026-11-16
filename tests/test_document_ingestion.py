@@ -1,16 +1,21 @@
 """PDF ingestion and deterministic page-cited evaluation tests."""
 
+import json
+import re
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from pypdf import PdfWriter
+from pypdf import PdfReader, PdfWriter
 
+from app.agent import ollama_client
 from app.services.document_store import (
     DocumentStoreError,
     add_pdf_document,
     create_workspace,
     load_workspace,
 )
+from mcp_servers.procurement.tools import document_evaluation
 from mcp_servers.procurement.tools.document_evaluation import evaluate_document_workspace
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -46,9 +51,7 @@ def test_searchable_pdf_upload_extracts_page_text_and_metadata(document_storage)
     assert document["extraction_status"] == "TEXT_EXTRACTED"
     assert len(document["sha256"]) == 64
     assert "Procurement Title: Supply and Installation" in document["extracted_preview"]
-    assert not document_storage.joinpath(workspace["workspace_id"], "source").samefile(
-        PROJECT_ROOT
-    )
+    assert not document_storage.joinpath(workspace["workspace_id"], "source").samefile(PROJECT_ROOT)
 
 
 def test_upload_rejects_non_pdf_and_empty_text_pdf(document_storage, tmp_path):
@@ -117,7 +120,8 @@ def test_pdf_evaluation_is_page_cited_and_never_selects_a_supplier(document_stor
     assert alpha["evidence_status"] == "COMPLIANT_WITH_AVAILABLE_EVIDENCE"
     assert beta["evidence_status"] == "VERIFIED_NONCOMPLIANT"
     assert "REQ-TAX-CLEARANCE" in beta["missing_documents"]
-    assert beta["deadline_check"]["status"] == "VERIFIED_NONCOMPLIANT"
+    assert all("deadline_check" not in supplier for supplier in result["suppliers"])
+    assert "SUBMISSION_DEADLINE" not in str(result)
     assert beta["risk_flags"][0]["code"] == "ENTITY_NAME_INCONSISTENCY"
     assert all(
         source["page"] >= 1
@@ -127,3 +131,70 @@ def test_pdf_evaluation_is_page_cited_and_never_selects_a_supplier(document_stor
     )
     assert "winner" not in str(result).lower()
     assert "award decision" not in str(result).lower()
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected_date"),
+    [
+        ("tender_requirements_synthetic.pdf", "Submission Deadline: 2026-12-15 12:00 EAT"),
+        ("alpha_supplier_bid_synthetic.pdf", "Submission Date: 2026-12-14 10:15 EAT"),
+        ("beta_supplier_bid_synthetic.pdf", "Submission Date: 2026-12-14 09:30 EAT"),
+    ],
+)
+def test_regenerated_demo_pdf_contains_expected_date(filename, expected_date):
+    reader = PdfReader(DEMO_DOCUMENTS / filename)
+    assert len(reader.pages) == 1
+    text = reader.pages[0].extract_text()
+    assert expected_date in text
+    assert "SYNTHETIC DEMONSTRATION DATA" in text
+
+
+@pytest.mark.asyncio
+async def test_pdf_submission_metadata_cannot_change_findings_or_priority(
+    document_storage, monkeypatch
+):
+    workspace_id = create_workspace()["workspace_id"]
+    for filename, document_type in [
+        ("tender_requirements_synthetic.pdf", "TENDER_REQUIREMENTS"),
+        ("alpha_supplier_bid_synthetic.pdf", "SUPPLIER_BID"),
+        ("beta_supplier_bid_synthetic.pdf", "SUPPLIER_BID"),
+    ]:
+        _upload_demo(workspace_id, filename, document_type)
+    baseline = evaluate_document_workspace(workspace_id)
+    original_pages = document_evaluation._pages
+    prompts = []
+
+    async def fake_chat_structured(**kwargs):
+        prompts.append(kwargs["user_prompt"])
+        assert "submitted_at" not in kwargs["user_prompt"]
+        assert "submission_deadline" not in kwargs["user_prompt"]
+        return json.dumps(
+            {"review_priority": "STANDARD_REVIEW", "summary": "Evidence reviewed.", "reasons": []}
+        )
+
+    monkeypatch.setattr(ollama_client, "_chat_structured", fake_chat_structured)
+    baseline_summary = await ollama_client.synthesize_document_evidence(baseline)
+    for timestamp in ["2026-12-01 09:30 EAT", "2027-01-01 09:30 EAT", "invalid", None]:
+
+        def changed_pages(requested_workspace, document, timestamp=timestamp):
+            pages = deepcopy(original_pages(requested_workspace, document))
+            for page in pages:
+                for label in ["Submission Date", "Submission Deadline"]:
+                    replacement = f"{label}: {timestamp}\n" if timestamp else ""
+                    page["text"] = re.sub(rf"(?m)^{label}:.*\n?", replacement, page["text"])
+            return pages
+
+        monkeypatch.setattr(document_evaluation, "_pages", changed_pages)
+        evidence = evaluate_document_workspace(workspace_id)
+        assert evidence["comparison"] == baseline["comparison"]
+        for actual, expected in zip(evidence["suppliers"], baseline["suppliers"], strict=True):
+            assert "deadline_check" not in actual
+            assert {k: v for k, v in actual.items() if k != "submitted_at"} == {
+                k: v for k, v in expected.items() if k != "submitted_at"
+            }
+        summary = await ollama_client.synthesize_document_evidence(evidence)
+        assert summary == baseline_summary
+        assert summary.review_priority == "ATTENTION_REQUIRED"
+        assert summary.human_committee_required is True
+        assert summary.final_award_decision is None
+    assert all(prompt == prompts[0] for prompt in prompts)

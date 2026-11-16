@@ -241,7 +241,6 @@ export interface DocumentSupplierEvaluation {
   document_checks: RequirementFinding[];
   eligibility_checks: RequirementFinding[];
   technical_checks: RequirementFinding[];
-  deadline_check: RequirementFinding;
   financial_check: RequirementFinding;
   missing_documents: string[];
   risk_flags: Array<{

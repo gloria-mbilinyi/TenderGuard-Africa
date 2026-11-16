@@ -47,7 +47,6 @@ def generate_document_evaluation_report_file(
             *supplier["document_checks"],
             *supplier["eligibility_checks"],
             *supplier["technical_checks"],
-            supplier["deadline_check"],
             supplier["financial_check"],
         ]
         check_lines = [
@@ -103,7 +102,7 @@ or select a supplier. The authorised procurement committee retains the final dec
 
 - Title: {result['tender']['title']['value'] or 'UNVERIFIED'}
 - Procuring entity: {result['tender']['procuring_entity']['value'] or 'UNVERIFIED'}
-- Submission deadline: {result['tender']['submission_deadline']['value'] or 'UNVERIFIED'}
+- Submission deadline (metadata only; not evaluated): {result['tender']['submission_deadline']['value'] or 'UNVERIFIED'}
 - Source: {_source_text(result['tender']['title']['sources'])}
 
 ## Supplier evaluations

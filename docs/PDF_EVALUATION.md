@@ -33,8 +33,11 @@ supplier-submitted evidence, submission dates, and prices. Every material check 
 document ID, filename, page number, and source quote.
 
 Unknown or absent content is `MISSING_EVIDENCE`, `UNVERIFIED`, or
-`REQUIRES_HUMAN_REVIEW`. TenderGuard never converts missing evidence into compliance
-and never invents a timestamp. Direct submitted-price ordering is explicitly not a
+`REQUIRES_HUMAN_REVIEW`. TenderGuard never converts missing evidence into compliance.
+Submission deadlines and bid timestamps are metadata only: timeliness is not assessed
+and does not affect compliance, supplier risk, or review priority. Timestamp metadata
+and its citations are excluded from AI synthesis. Portal acceptance is not inferred
+from a PDF or from the presence of a workspace. Direct submitted-price ordering is explicitly not a
 ranking or award recommendation. Historical price comparison remains disabled unless
 a suitable comparable dataset is established.
 
@@ -57,9 +60,12 @@ The committed `demo_documents/` directory contains:
 - `beta_supplier_bid_synthetic.pdf`
 
 Every PDF is visibly marked as synthetic demonstration data. Alpha contains all
-required evidence. Beta intentionally omits tax-clearance evidence, records a late
-submission date, contains partial delivery/warranty responses, and has an internal
+required evidence. Beta intentionally omits tax-clearance evidence,
+contains partial delivery/warranty responses, and has an internal
 entity-name inconsistency. These are synthetic review flags, not accusations.
+
+The tender deadline is 15 December 2026 at 12:00 EAT. The Alpha and Beta PDF
+submission metadata is 14 December 2026 at 10:15 and 09:30 EAT respectively.
 
 Regenerate the deterministic files with:
 

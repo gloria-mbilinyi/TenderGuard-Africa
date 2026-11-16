@@ -228,7 +228,7 @@ async def run_evals() -> list[dict[str, Any]]:
 
         passed = (
             result["status"] == "NON_COMPLIANT"
-            and len(failed) == 3
+            and {check["criterion"] for check in failed} == {"TAX_CLEARANCE", "LOCAL_REGISTRATION"}
             and sourced
         )
 
@@ -236,7 +236,7 @@ async def run_evals() -> list[dict[str, Any]]:
             make_result(
                 "EVAL-04",
                 "Check mandatory compliance for BID-BETA-001.",
-                "Three sourced failures: deadline, tax clearance, local registration.",
+                "Two sourced failures: tax clearance and local registration.",
                 "PASS" if passed else "FAIL",
                 f"failed={[item['criterion'] for item in failed]}",
                 duration,
@@ -247,7 +247,7 @@ async def run_evals() -> list[dict[str, Any]]:
             make_result(
                 "EVAL-04",
                 "Check mandatory compliance for BID-BETA-001.",
-                "Three sourced failures.",
+                "Two sourced failures.",
                 "FAIL",
                 f"{type(exc).__name__}: {exc}",
                 0,

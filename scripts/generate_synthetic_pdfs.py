@@ -162,7 +162,7 @@ BETA_LINES = [
     "Supplier Name: Beta Systems Ltd",
     "Registered Entity Name: Beta Systems Holdings Ltd",
     "Supplier Identifier: SYNTH-BETA-001",
-    "Submission Date: 2026-12-16 09:30 EAT",
+    "Submission Date: 2026-12-14 09:30 EAT",
     "Bid Price: TZS 47,000,000",
     "Bid Validity: 60 days",
     "",
