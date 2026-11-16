@@ -2,7 +2,7 @@ name: tenderguard-africa
 
 services:
   tenderguard:
-    image: tenderguard-africa:0.2.0
+    image: tenderguard-africa:0.3.0
     build:
       context: .
       args:
@@ -11,6 +11,8 @@ services:
         FILESYSTEM_MCP_VERSION: "2.3.0"
     environment:
       TENDERGUARD_API_KEY: "${TENDERGUARD_API_KEY:?Generate TENDERGUARD_API_KEY in .env}"
+      TENDERGUARD_DASHBOARD_PASSWORD: "${TENDERGUARD_DASHBOARD_PASSWORD:?Set a private dashboard password of at least 12 characters in .env}"
+      TENDERGUARD_COOKIE_SECURE: "${TENDERGUARD_COOKIE_SECURE:-false}"
       TENDERGUARD_OLLAMA_URL: "${TENDERGUARD_OLLAMA_URL:-http://host.docker.internal:11434/api/chat}"
       TENDERGUARD_OLLAMA_MODEL: "${TENDERGUARD_OLLAMA_MODEL:-qwen3:1.7b}"
       TENDERGUARD_FILESYSTEM_MCP_COMMAND: /opt/filesystem-mcp/node_modules/.bin/mcp-server-filesystem

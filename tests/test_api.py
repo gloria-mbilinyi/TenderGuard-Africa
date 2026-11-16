@@ -77,7 +77,7 @@ def test_evaluation_returns_only_human_review(monkeypatch):
     )
     response = client.post(
         "/api/evaluations",
-        json={"tender_id": "TG-1", "bid_id": "BID-1"},
+        json={"tender_id": "TG-DEMO-001", "bid_id": "BID-ALPHA-001"},
         headers={"X-TenderGuard-Key": TEST_API_KEY},
     )
     assert response.status_code == 200, response.text
@@ -94,15 +94,15 @@ def test_evaluation_refuses_automatic_award(monkeypatch):
         monkeypatch,
         {
             "status": "AWAITING_HUMAN_REVIEW",
-            "decision_support": {"final_award_decision": "BID-1"},
+            "decision_support": {"final_award_decision": "BID-ALPHA-001"},
         },
     )
     response = client.post(
         "/api/evaluations",
-        json={"tender_id": "TG-1", "bid_id": "BID-1"},
+        json={"tender_id": "TG-DEMO-001", "bid_id": "BID-ALPHA-001"},
         headers={"X-TenderGuard-Key": TEST_API_KEY},
     )
-    assert response.status_code == 500
+    assert response.status_code == 502
 
 
 def test_evaluation_blocks_invalid_identifiers(monkeypatch):
@@ -123,8 +123,19 @@ def test_evaluation_reports_clear_ollama_error(monkeypatch):
     )
     response = client.post(
         "/api/evaluations",
-        json={"tender_id": "TG-1", "bid_id": "BID-1"},
+        json={"tender_id": "TG-DEMO-001", "bid_id": "BID-ALPHA-001"},
         headers={"X-TenderGuard-Key": TEST_API_KEY},
     )
     assert response.status_code == 503
     assert "Ollama is unavailable" in response.json()["detail"]
+
+
+def test_evaluation_rejects_unknown_catalog_selection(monkeypatch):
+    monkeypatch.setenv("TENDERGUARD_API_KEY", TEST_API_KEY)
+    response = client.post(
+        "/api/evaluations",
+        json={"tender_id": "TG-UNKNOWN", "bid_id": "BID-UNKNOWN"},
+        headers={"X-TenderGuard-Key": TEST_API_KEY},
+    )
+    assert response.status_code == 404
+    assert "not available" in response.json()["detail"]

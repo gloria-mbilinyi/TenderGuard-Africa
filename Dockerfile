@@ -12,6 +12,14 @@ RUN npm install --omit=dev \
         "@modelcontextprotocol/server-filesystem@${FILESYSTEM_MCP_VERSION}" \
     && npm cache clean --force
 
+FROM node:${NODE_VERSION}-bookworm-slim AS frontend-build
+
+WORKDIR /src/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
 
 LABEL org.opencontainers.image.title="TenderGuard Africa" \
@@ -44,6 +52,7 @@ WORKDIR /app
 COPY --chown=tenderguard:tenderguard app ./app
 COPY --chown=tenderguard:tenderguard mcp_servers ./mcp_servers
 COPY --chown=tenderguard:tenderguard data ./data
+COPY --from=frontend-build --chown=tenderguard:tenderguard /src/frontend/dist ./frontend/dist
 COPY --chown=tenderguard:tenderguard pyproject.toml README.md LICENSE ./
 
 RUN mkdir --parents /app/reports \

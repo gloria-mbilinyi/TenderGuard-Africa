@@ -421,18 +421,67 @@ TenderGuard Africa prepares the procurement evaluation file.
 The human procurement committee decides.
 
 
-14\. Docker Deployment Architecture
+## 14. Phase 3 Web Dashboard Architecture
+
+The professional dashboard is a separate React, TypeScript, Vite, and Tailwind
+application under `frontend/`. It is a client of the existing workflow, not a second
+evaluation implementation.
+
+```text
+Browser
+  |
+  | HttpOnly local session + CSRF token
+  v
+FastAPI browser backend-for-frontend (`/api/browser/*`)
+  |
+  +--> synthetic catalog (read-only)
+  +--> completed in-memory evaluation summaries (read-only)
+  +--> generated draft Markdown reports (read-only/download-only)
+  +--> sanitized Ollama status
+  |
+  v
+Shared evaluation service
+  |
+  v
+LangGraph --> Procurement MCP --> sourced evidence
+  |                |
+  +---- Ollama ----+
+  |
+  v
+AWAITING_HUMAN_REVIEW
+final_award_decision = null
+```
+
+The programmatic `/api/evaluations` route retains its independent shared API-key
+control. The browser never receives that key. Browser sessions are opaque,
+server-side, short-lived, `HttpOnly`, `SameSite=Strict`, and restricted to the browser
+API path. Mutating routes additionally require an allowed origin and matching CSRF
+token.
+
+The report library deliberately exposes only generated Markdown drafts matching the
+expected filename and committee-review marker. Audit JSONL, source datasets,
+arbitrary paths, report approval, and award actions are outside the browser boundary.
+
+The local password mechanism is suitable for a single-operator demonstration, not
+production identity. A real institutional deployment still needs authenticated user
+identities, role-based permissions, durable session storage, rate limiting, HTTPS,
+and tamper-evident audit retention.
+
+
+15\. Docker Deployment Architecture
 
 The distributable deployment keeps the existing application layers intact:
 
 ```text
 Host browser or API client
         |
-        | 127.0.0.1:8000 + X-TenderGuard-Key
+        | 127.0.0.1:8000
+        | browser session or X-TenderGuard-Key
         v
 TenderGuard container (unprivileged UID 10001)
         |
-        +--> FastAPI evaluation-only interface
+        +--> production React dashboard
+        +--> FastAPI browser and programmatic interfaces
         +--> LangGraph orchestration
         +--> Procurement MCP over local stdio
         +--> Filesystem MCP over local stdio (read-only reports/ scope)

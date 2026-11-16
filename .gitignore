@@ -15,3 +15,8 @@ reports/*.jsonl
 reports/*.md
 evidence/
 *.egg-info/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+.worktree-backups/
+reports/pytest*/

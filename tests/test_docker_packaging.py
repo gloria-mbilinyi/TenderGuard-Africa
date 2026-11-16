@@ -20,6 +20,9 @@ def test_dockerfile_uses_pinned_non_root_runtime_and_healthcheck():
     assert "USER 10001:10001" in dockerfile
     assert "HEALTHCHECK" in dockerfile
     assert "/api/health" in dockerfile
+    assert "npm ci" in dockerfile
+    assert "npm run build" in dockerfile
+    assert "/src/frontend/dist ./frontend/dist" in dockerfile
     assert "COPY . " not in dockerfile
 
 
@@ -34,6 +37,7 @@ def test_compose_defaults_to_localhost_and_persistent_reports():
     assert service["read_only"] is True
     assert service["cap_drop"] == ["ALL"]
     assert "no-new-privileges:true" in service["security_opt"]
+    assert "TENDERGUARD_DASHBOARD_PASSWORD" in service["environment"]
     assert "tenderguard_reports" in compose["volumes"]
 
 

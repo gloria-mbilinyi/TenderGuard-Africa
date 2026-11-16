@@ -2,20 +2,22 @@
 
 This guide runs TenderGuard Africa as a downloadable, self-hosted AI agent on Windows
 or Linux. The deployment uses free and open-source components and requires no paid AI
-API. The API evaluates evidence only: it cannot award, reject, disqualify, or select a
-bidder. Every successful autonomous run stops at `AWAITING_HUMAN_REVIEW`.
+API. The included web dashboard evaluates evidence only: it cannot award, reject,
+disqualify, or select a bidder. Every successful autonomous run stops at
+`AWAITING_HUMAN_REVIEW`.
 
 ## 1. What Docker runs
 
 The default Compose project starts one TenderGuard container containing:
 
 - Python 3.12 and the FastAPI interface;
+- the production React dashboard built into the image;
 - the existing LangGraph procurement workflow;
 - the TenderGuard Procurement MCP server, started locally over stdio;
 - Node.js 24 and the pinned borrowed Filesystem MCP server, also over stdio;
 - read-only synthetic procurement data.
 
-The API is published only on `127.0.0.1:8000`. Reports and audit records use the
+The dashboard and API are published only on `127.0.0.1:8000`. Reports and audit records use the
 `tenderguard_reports` named volume. The application runs as an unprivileged user with
 a read-only root filesystem, no Linux capabilities, and no-new-privileges enabled.
 
@@ -74,7 +76,7 @@ git switch nairobi-demo-prep
 
 All remaining commands in this guide run from the repository root.
 
-## 4. Prepare `.env` and generate the API key
+## 4. Prepare `.env` and local credentials
 
 Never put a real API key in `.env.example` or commit `.env`. The Docker build context
 explicitly excludes environment files.
@@ -85,6 +87,7 @@ In Windows PowerShell:
 Copy-Item .env.example .env
 $apiKey = [guid]::NewGuid().ToString("N")
 (Get-Content .env) -replace '^TENDERGUARD_API_KEY=.*$', "TENDERGUARD_API_KEY=$apiKey" | Set-Content .env
+(Get-Content .env) -replace '^TENDERGUARD_DASHBOARD_PASSWORD=.*$', 'TENDERGUARD_DASHBOARD_PASSWORD=replace-with-a-private-password' | Set-Content .env
 Write-Host "Keep this local API key private: $apiKey"
 ```
 
@@ -94,10 +97,14 @@ In Linux:
 cp .env.example .env
 api_key="$(openssl rand -hex 32)"
 sed -i "s/^TENDERGUARD_API_KEY=.*/TENDERGUARD_API_KEY=${api_key}/" .env
+sed -i "s/^TENDERGUARD_DASHBOARD_PASSWORD=.*/TENDERGUARD_DASHBOARD_PASSWORD=replace-with-a-private-password/" .env
 printf 'Keep this local API key private: %s\n' "$api_key"
 ```
 
 TenderGuard refuses to evaluate when the configured key is shorter than 32 characters.
+Dashboard sign-in also refuses to start when its password is shorter than 12
+characters. Replace the example password with a private local value and do not reuse
+an institutional credential.
 The health endpoint intentionally remains unauthenticated so Docker can perform a
 local liveness check.
 
@@ -219,6 +226,9 @@ ok     tenderguard-africa
 The health endpoint proves that FastAPI is alive. It intentionally does not download a
 model or run a procurement evaluation.
 
+Open `http://127.0.0.1:8000` to use the web dashboard and sign in with the dashboard
+password configured in `.env`. The browser never receives the programmatic API key.
+
 ## 8. Run the synthetic evaluation
 
 Read the API key back from `.env`, send the demo request, and inspect the result:
@@ -327,6 +337,13 @@ Select-String '^TENDERGUARD_API_KEY=.{32,}$' .env
 ```
 
 Do not paste the key into issue reports or screenshots.
+
+If Compose instead reports that the dashboard password is required, confirm the value
+is present and at least 12 characters:
+
+```powershell
+Select-String '^TENDERGUARD_DASHBOARD_PASSWORD=.{12,}$' .env
+```
 
 ### Health returns connection refused
 

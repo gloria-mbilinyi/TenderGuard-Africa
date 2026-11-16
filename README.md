@@ -164,12 +164,46 @@ This is intentional. The autonomous agent is not allowed to continue to a procur
 
 ---
 
+## Professional Web Dashboard
+
+Phase 3 adds a responsive React and TypeScript dashboard backed by the real FastAPI,
+LangGraph, Procurement MCP, and Ollama workflow. It includes synthetic tender and bid
+selection, validated evidence views, recent evaluation activity, protected draft
+report downloads, dark mode, and sanitized local-service status.
+
+The browser does not contain or receive `TENDERGUARD_API_KEY`. It signs in through a
+separate server-side local session using an `HttpOnly`, `SameSite=Strict` cookie and
+CSRF protection. This is a single-operator local demo control, not production identity
+or institutional role-based access control.
+
+For local development:
+
+```powershell
+$env:TENDERGUARD_DASHBOARD_PASSWORD = "replace-with-a-private-password"
+.\.venv\Scripts\python.exe -m uvicorn app.api.main:app --host 127.0.0.1 --port 8000
+```
+
+In a second terminal:
+
+```powershell
+Set-Location frontend
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. See
+[`docs/WEB_DASHBOARD.md`](docs/WEB_DASHBOARD.md) for the complete development,
+production-build, Docker, authentication, and security-boundary guide.
+
+---
+
 ## Docker Quick Start
 
-Docker packages the FastAPI application, LangGraph workflow, Procurement MCP server,
-and the borrowed Filesystem MCP server as a self-hosted agent. It uses only free and
-open-source runtime components. The API is published on `127.0.0.1` by default and
-still stops every autonomous evaluation at `AWAITING_HUMAN_REVIEW`.
+Docker packages the production dashboard, FastAPI application, LangGraph workflow,
+Procurement MCP server, and borrowed Filesystem MCP server as a self-hosted agent. It
+uses only free and open-source runtime components. The dashboard and API are published
+on `127.0.0.1` by default, and every autonomous evaluation still stops at
+`AWAITING_HUMAN_REVIEW`.
 
 Prerequisites:
 
@@ -183,12 +217,15 @@ From the repository root in PowerShell:
 Copy-Item .env.example .env
 $apiKey = [guid]::NewGuid().ToString("N")
 (Get-Content .env) -replace '^TENDERGUARD_API_KEY=.*$', "TENDERGUARD_API_KEY=$apiKey" | Set-Content .env
+(Get-Content .env) -replace '^TENDERGUARD_DASHBOARD_PASSWORD=.*$', 'TENDERGUARD_DASHBOARD_PASSWORD=replace-with-a-private-password' | Set-Content .env
 ollama pull qwen3:1.7b
 docker compose build
 docker compose up -d
 docker compose ps
 Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```
+
+Open `http://127.0.0.1:8000` after the health check succeeds.
 
 The default `.env.example` connects the container to host Ollama through
 `host.docker.internal`. To use Dockerized Ollama instead, set
@@ -238,6 +275,9 @@ Run the evaluation agent:
 ```powershell
 python -m app.agent.run --tender TG-DEMO-001 --bid BID-BETA-001
 ```
+
+To run the web dashboard, follow the two-terminal development steps above or build
+`frontend/` and let FastAPI serve `frontend/dist` on port 8000.
 
 ---
 
@@ -719,6 +759,14 @@ Run the automated test suite:
 pytest -q
 ```
 
+Run frontend tests and a production build:
+
+```powershell
+Set-Location frontend
+npm test
+npm run build
+```
+
 Run the full evaluation suite:
 
 ```powershell
@@ -728,6 +776,10 @@ python -m evals.run_evals
 ---
 
 ## Project Structure
+
+The Phase 3 additions are `frontend/` for the React application, `app/services/` for
+catalog/result/report boundaries, and the authenticated browser routes under
+`app/api/`.
 
 ```text
 TenderGuard-Africa/
@@ -808,8 +860,17 @@ TenderGuard-Africa/
 ### Backend and Validation
 
 - Python 3.12
+- FastAPI
 - Pydantic
 - HTTPX
+
+### Web Dashboard
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- Lucide React
 
 ### Document Support
 
@@ -820,6 +881,8 @@ PyPDF is included for document-processing support, but image-only/scanned PDF OC
 ### Testing
 
 - Pytest
+- Vitest
+- Testing Library
 
 ### Supporting Runtime
 
@@ -845,9 +908,9 @@ The current demonstration uses structured synthetic procurement records rather t
 
 ### User Interface
 
-The current primary demonstration is command-line based.
-
-The architecture focuses on agent reliability, MCP integration, auditability, and human oversight rather than frontend complexity.
+The dashboard password and in-memory session store are appropriate for a local,
+single-operator demonstration. Production deployment requires durable identity,
+role-based authorization, HTTPS, rate limiting, and multi-user session controls.
 
 ---
 
@@ -864,9 +927,8 @@ Future versions of TenderGuard Africa could include:
 - human validation of low-confidence extracted fields;
 - additional procurement-risk indicators;
 - persistent database storage;
-- authentication;
-- role-based access control;
-- a web-based procurement review dashboard;
+- institutional identity and role-based access control;
+- durable database-backed sessions and evaluation history;
 - institution-specific procurement rules;
 - multilingual procurement support;
 - integrations with public procurement portals where lawful and technically available.
