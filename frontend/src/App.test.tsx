@@ -16,6 +16,7 @@ vi.mock("./lib/api", async () => {
     getEvaluations: vi.fn(),
     getReports: vi.fn(),
     getSystemStatus: vi.fn(),
+    getDocumentWorkspaces: vi.fn(),
     createEvaluation: vi.fn(),
   };
 });
@@ -34,6 +35,7 @@ describe("TenderGuard dashboard", () => {
     vi.mocked(api.getCatalog).mockResolvedValue({ tenders: [] });
     vi.mocked(api.getEvaluations).mockResolvedValue([]);
     vi.mocked(api.getReports).mockResolvedValue([]);
+    vi.mocked(api.getDocumentWorkspaces).mockResolvedValue([]);
     vi.mocked(api.getSystemStatus).mockResolvedValue({
       api_status: "AVAILABLE",
       api_version: "0.3.0",

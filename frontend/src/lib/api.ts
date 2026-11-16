@@ -1,6 +1,8 @@
 import type {
   BrowserSession,
   CatalogResponse,
+  DocumentEvaluationResult,
+  DocumentWorkspace,
   EvaluationResult,
   EvaluationSummary,
   ReportItem,
@@ -123,6 +125,64 @@ export async function getReports(): Promise<ReportItem[]> {
 
 export async function getSystemStatus(): Promise<SystemStatus> {
   return request<SystemStatus>("/api/browser/system");
+}
+
+export async function getDocumentWorkspaces(): Promise<DocumentWorkspace[]> {
+  const result = await request<{ workspaces: DocumentWorkspace[] }>(
+    "/api/browser/document-evaluations",
+  );
+  return result.workspaces;
+}
+
+export async function createDocumentWorkspace(title: string): Promise<DocumentWorkspace> {
+  return request<DocumentWorkspace>("/api/browser/document-evaluations", {
+    method: "POST",
+    headers: csrfHeaders(),
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function getDocumentWorkspace(workspaceId: string): Promise<DocumentWorkspace> {
+  return request<DocumentWorkspace>(`/api/browser/document-evaluations/${workspaceId}`);
+}
+
+export async function uploadDocument(
+  workspaceId: string,
+  file: File,
+  documentType: "TENDER_REQUIREMENTS" | "SUPPLIER_BID",
+): Promise<DocumentWorkspace> {
+  const query = new URLSearchParams({ document_type: documentType });
+  return request<DocumentWorkspace>(
+    `/api/browser/document-evaluations/${workspaceId}/documents?${query}`,
+    {
+      method: "POST",
+      headers: {
+        ...csrfHeaders(),
+        "Content-Type": "application/pdf",
+        "X-File-Name": encodeURIComponent(file.name),
+      },
+      body: file,
+    },
+    60_000,
+  );
+}
+
+export async function evaluateDocuments(
+  workspaceId: string,
+): Promise<DocumentEvaluationResult> {
+  return request<DocumentEvaluationResult>(
+    `/api/browser/document-evaluations/${workspaceId}/evaluate`,
+    { method: "POST", headers: csrfHeaders() },
+    EVALUATION_TIMEOUT_MS,
+  );
+}
+
+export async function getDocumentResult(
+  workspaceId: string,
+): Promise<DocumentEvaluationResult> {
+  return request<DocumentEvaluationResult>(
+    `/api/browser/document-evaluations/${workspaceId}/result`,
+  );
 }
 
 export async function createEvaluation(

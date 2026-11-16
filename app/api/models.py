@@ -229,3 +229,156 @@ class SystemStatusResponse(BaseModel):
     model_status: Literal["AVAILABLE", "MODEL_MISSING", "UNAVAILABLE"]
     authentication: Literal["LOCAL_DEMO_SESSION"] = "LOCAL_DEMO_SESSION"
     secrets_exposed_to_browser: Literal[False] = False
+
+
+class CreateDocumentWorkspaceRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+
+
+class UploadedDocument(BaseModel):
+    document_id: str
+    document_type: Literal["TENDER_REQUIREMENTS", "SUPPLIER_BID"]
+    filename: str
+    supplier_name: str | None = None
+    content_type: Literal["application/pdf"]
+    size_bytes: int
+    page_count: int
+    sha256: str
+    uploaded_at: str
+    extraction_status: Literal["TEXT_EXTRACTED"]
+    pdf_metadata: dict[str, str | None]
+    extracted_preview: str | None = None
+
+
+class DocumentWorkspace(BaseModel):
+    workspace_id: str
+    title: str
+    created_at: str
+    updated_at: str
+    status: Literal[
+        "DOCUMENTS_PENDING",
+        "READY_FOR_EVALUATION",
+        "AWAITING_HUMAN_REVIEW",
+    ]
+    documents: list[UploadedDocument]
+    latest_evaluation_id: str | None = None
+
+
+class DocumentWorkspaceListResponse(BaseModel):
+    workspaces: list[DocumentWorkspace]
+
+
+class PageCitation(BaseModel):
+    document_id: str
+    filename: str
+    page: int = Field(ge=1)
+    quote: str = Field(min_length=1, max_length=500)
+
+
+class ExtractedField(BaseModel):
+    value: str | int | float | None = None
+    status: Literal["VERIFIED", "NOT_FOUND", "AMBIGUOUS"]
+    sources: list[PageCitation] = Field(default_factory=list)
+
+
+class ExtractedRequirement(BaseModel):
+    code: str
+    label: str
+    source: PageCitation
+
+
+class ExtractedTender(BaseModel):
+    document_id: str
+    filename: str
+    tender_id: ExtractedField
+    title: ExtractedField
+    procuring_entity: ExtractedField
+    submission_deadline: ExtractedField
+    currency: ExtractedField
+    required_documents: list[ExtractedRequirement]
+    eligibility_criteria: list[ExtractedRequirement]
+    technical_specifications: list[ExtractedRequirement]
+    financial_requirements: list[ExtractedRequirement]
+    evaluation_criteria: list[ExtractedRequirement]
+
+
+class RequirementFinding(BaseModel):
+    code: str
+    requirement: str
+    status: Literal[
+        "VERIFIED_COMPLIANT",
+        "VERIFIED_NONCOMPLIANT",
+        "MISSING_EVIDENCE",
+        "REQUIRES_HUMAN_REVIEW",
+        "UNVERIFIED",
+    ]
+    finding: str
+    sources: list[PageCitation]
+
+
+class DocumentRiskFlag(BaseModel):
+    code: str
+    severity: Literal["LOW", "MEDIUM", "HIGH"]
+    finding: str
+    sources: list[PageCitation]
+
+
+class DocumentSupplierEvaluation(BaseModel):
+    document_id: str
+    filename: str
+    supplier_name: ExtractedField
+    supplier_identifier: ExtractedField
+    bid_reference: ExtractedField
+    submitted_at: ExtractedField
+    bid_price: ExtractedField
+    currency: ExtractedField
+    document_checks: list[RequirementFinding]
+    eligibility_checks: list[RequirementFinding]
+    technical_checks: list[RequirementFinding]
+    deadline_check: RequirementFinding
+    financial_check: RequirementFinding
+    missing_documents: list[str]
+    risk_flags: list[DocumentRiskFlag]
+    evidence_status: Literal[
+        "COMPLIANT_WITH_AVAILABLE_EVIDENCE",
+        "VERIFIED_NONCOMPLIANT",
+        "EVIDENCE_INCOMPLETE",
+    ]
+
+
+class PriceComparisonItem(BaseModel):
+    document_id: str
+    supplier_name: str
+    amount: int | float
+    currency: str
+    source: PageCitation
+
+
+class DocumentComparison(BaseModel):
+    supplier_count: int = Field(ge=2)
+    directly_comparable_prices: bool
+    price_order: list[PriceComparisonItem]
+    historical_price_comparison_performed: Literal[False] = False
+    notes: list[str]
+
+
+class DocumentDecisionSupport(BaseModel):
+    review_priority: Literal["STANDARD_REVIEW", "ATTENTION_REQUIRED"]
+    summary: str
+    reasons: list[str]
+    human_committee_required: Literal[True] = True
+    final_award_decision: None = None
+
+
+class DocumentEvaluationResponse(BaseModel):
+    evaluation_id: str
+    workspace_id: str
+    completed_at: str
+    status: Literal["AWAITING_HUMAN_REVIEW"]
+    completed_tools: list[str]
+    tender: ExtractedTender
+    suppliers: list[DocumentSupplierEvaluation] = Field(min_length=2)
+    comparison: DocumentComparison
+    decision_support: DocumentDecisionSupport
+    human_committee_required: Literal[True] = True
+    final_award_decision: None = None

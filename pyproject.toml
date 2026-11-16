@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tenderguard-africa"
-version = "0.3.0"
+version = "0.4.0"
 description = "Agentic AI procurement assistant for auditable public tender evaluation in Africa."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -20,6 +20,13 @@ dependencies = [
     "fastapi>=0.115,<1.0",
     "uvicorn>=0.34,<1.0",
 ]
+
+[project.scripts]
+tenderguard-agent = "app.agent.run:main"
+tenderguard-document-agent = "app.agent.run_documents:main"
+tenderguard-approve = "app.agent.approve:main"
+tenderguard-approve-documents = "app.agent.approve_documents:main"
+tenderguard-procurement-mcp = "mcp_servers.procurement.server:main"
 
 [project.optional-dependencies]
 dev = [

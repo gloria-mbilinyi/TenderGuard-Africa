@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Files,
   FileText,
   LogOut,
   Menu,
@@ -15,6 +16,7 @@ import { BrandMark } from "./BrandMark";
 
 const navigation: Array<{ id: ViewName; label: string; icon: typeof BarChart3 }> = [
   { id: "overview", label: "Overview", icon: BarChart3 },
+  { id: "documents", label: "PDF workspaces", icon: Files },
   { id: "evaluate", label: "Tender evaluation", icon: ScanSearch },
   { id: "reports", label: "Reports", icon: FileText },
   { id: "settings", label: "Settings", icon: Settings },

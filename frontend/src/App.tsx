@@ -2,6 +2,7 @@ import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import * as api from "./lib/api";
 import { AppShell } from "./components/AppShell";
+import { DocumentsPage } from "./components/DocumentsPage";
 import { EvaluationPage } from "./components/EvaluationPage";
 import { LoginPage } from "./components/LoginPage";
 import { OverviewPage } from "./components/OverviewPage";
@@ -9,6 +10,7 @@ import { ReportsPage } from "./components/ReportsPage";
 import { SettingsPage } from "./components/SettingsPage";
 import type {
   CatalogTender,
+  DocumentWorkspace,
   EvaluationResult,
   EvaluationSummary,
   ReportItem,
@@ -32,6 +34,7 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(preferredDarkMode);
   const [tenders, setTenders] = useState<CatalogTender[]>([]);
+  const [documentWorkspaces, setDocumentWorkspaces] = useState<DocumentWorkspace[]>([]);
   const [evaluations, setEvaluations] = useState<EvaluationSummary[]>([]);
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
@@ -48,16 +51,18 @@ export default function App() {
     setLoadingData(true);
     setDataError(null);
     try {
-      const [catalog, evaluationItems, reportItems, status] = await Promise.all([
+      const [catalog, evaluationItems, reportItems, status, workspaceItems] = await Promise.all([
         api.getCatalog(),
         api.getEvaluations(),
         api.getReports(),
         api.getSystemStatus(),
+        api.getDocumentWorkspaces(),
       ]);
       setTenders(catalog.tenders);
       setEvaluations(evaluationItems);
       setReports(reportItems);
       setSystemStatus(status);
+      setDocumentWorkspaces(workspaceItems);
     } catch (error) {
       if (error instanceof api.AuthenticationError) {
         api.clearSessionMemory();
@@ -128,7 +133,14 @@ export default function App() {
   }
 
   let content;
-  if (activeView === "evaluate") {
+  if (activeView === "documents") {
+    content = (
+      <DocumentsPage
+        workspaces={documentWorkspaces}
+        onWorkspacesChange={setDocumentWorkspaces}
+      />
+    );
+  } else if (activeView === "evaluate") {
     content = <EvaluationPage tenders={tenders} result={latestResult} onEvaluate={handleEvaluation} />;
   } else if (activeView === "reports") {
     content = <ReportsPage reports={reports} />;

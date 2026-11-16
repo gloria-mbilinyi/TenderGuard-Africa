@@ -20,3 +20,4 @@ frontend/dist/
 frontend/coverage/
 .worktree-backups/
 reports/pytest*/
+storage/

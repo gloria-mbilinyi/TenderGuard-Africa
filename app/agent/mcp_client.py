@@ -1,10 +1,30 @@
 import json
+import os
 import sys
 from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import TextContent
+
+
+def _procurement_mcp_environment() -> dict[str, str]:
+    """Pass only document-runtime settings to the trusted local MCP subprocess."""
+
+    allowed = {
+        "TENDERGUARD_DOCUMENT_STORAGE",
+        "TENDERGUARD_MAX_PDF_MB",
+        "TENDERGUARD_MAX_PDF_PAGES",
+    }
+    return {name: os.environ[name] for name in allowed if os.environ.get(name)}
+
+
+def _server_parameters() -> StdioServerParameters:
+    return StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "mcp_servers.procurement.server"],
+        env=_procurement_mcp_environment(),
+    )
 
 
 async def call_procurement_tool(
@@ -18,13 +38,7 @@ async def call_procurement_tool(
     Every tool execution crosses the MCP client/server boundary.
     """
 
-    server_params = StdioServerParameters(
-        command=sys.executable,
-        args=[
-            "-m",
-            "mcp_servers.procurement.server",
-        ],
-    )
+    server_params = _server_parameters()
 
     async with (
         stdio_client(server_params) as (read, write),
@@ -77,13 +91,7 @@ async def call_procurement_tool(
 async def list_procurement_tools() -> list[str]:
     """Return tool names exposed by the procurement MCP server."""
 
-    server_params = StdioServerParameters(
-        command=sys.executable,
-        args=[
-            "-m",
-            "mcp_servers.procurement.server",
-        ],
-    )
+    server_params = _server_parameters()
 
     async with (
         stdio_client(server_params) as (read, write),

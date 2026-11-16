@@ -1,4 +1,4 @@
-export type ViewName = "overview" | "evaluate" | "reports" | "settings";
+export type ViewName = "overview" | "documents" | "evaluate" | "reports" | "settings";
 
 export interface BrowserSession {
   authenticated: true;
@@ -176,4 +176,127 @@ export interface SystemStatus {
   model_status: "AVAILABLE" | "MODEL_MISSING" | "UNAVAILABLE";
   authentication: "LOCAL_DEMO_SESSION";
   secrets_exposed_to_browser: false;
+}
+
+export interface UploadedDocument {
+  document_id: string;
+  document_type: "TENDER_REQUIREMENTS" | "SUPPLIER_BID";
+  filename: string;
+  supplier_name: string | null;
+  content_type: "application/pdf";
+  size_bytes: number;
+  page_count: number;
+  sha256: string;
+  uploaded_at: string;
+  extraction_status: "TEXT_EXTRACTED";
+  pdf_metadata: Record<string, string | null>;
+  extracted_preview?: string | null;
+}
+
+export interface DocumentWorkspace {
+  workspace_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  status: "DOCUMENTS_PENDING" | "READY_FOR_EVALUATION" | "AWAITING_HUMAN_REVIEW";
+  documents: UploadedDocument[];
+  latest_evaluation_id: string | null;
+}
+
+export interface PageCitation {
+  document_id: string;
+  filename: string;
+  page: number;
+  quote: string;
+}
+
+export interface ExtractedField {
+  value: string | number | null;
+  status: "VERIFIED" | "NOT_FOUND" | "AMBIGUOUS";
+  sources: PageCitation[];
+}
+
+export interface RequirementFinding {
+  code: string;
+  requirement: string;
+  status:
+    | "VERIFIED_COMPLIANT"
+    | "VERIFIED_NONCOMPLIANT"
+    | "MISSING_EVIDENCE"
+    | "REQUIRES_HUMAN_REVIEW"
+    | "UNVERIFIED";
+  finding: string;
+  sources: PageCitation[];
+}
+
+export interface DocumentSupplierEvaluation {
+  document_id: string;
+  filename: string;
+  supplier_name: ExtractedField;
+  supplier_identifier: ExtractedField;
+  bid_reference: ExtractedField;
+  submitted_at: ExtractedField;
+  bid_price: ExtractedField;
+  currency: ExtractedField;
+  document_checks: RequirementFinding[];
+  eligibility_checks: RequirementFinding[];
+  technical_checks: RequirementFinding[];
+  deadline_check: RequirementFinding;
+  financial_check: RequirementFinding;
+  missing_documents: string[];
+  risk_flags: Array<{
+    code: string;
+    severity: "LOW" | "MEDIUM" | "HIGH";
+    finding: string;
+    sources: PageCitation[];
+  }>;
+  evidence_status:
+    | "COMPLIANT_WITH_AVAILABLE_EVIDENCE"
+    | "VERIFIED_NONCOMPLIANT"
+    | "EVIDENCE_INCOMPLETE";
+}
+
+export interface DocumentEvaluationResult {
+  evaluation_id: string;
+  workspace_id: string;
+  completed_at: string;
+  status: "AWAITING_HUMAN_REVIEW";
+  completed_tools: string[];
+  tender: {
+    document_id: string;
+    filename: string;
+    tender_id: ExtractedField;
+    title: ExtractedField;
+    procuring_entity: ExtractedField;
+    submission_deadline: ExtractedField;
+    currency: ExtractedField;
+    required_documents: Array<{ code: string; label: string; source: PageCitation }>;
+    eligibility_criteria: Array<{ code: string; label: string; source: PageCitation }>;
+    technical_specifications: Array<{ code: string; label: string; source: PageCitation }>;
+    financial_requirements: Array<{ code: string; label: string; source: PageCitation }>;
+    evaluation_criteria: Array<{ code: string; label: string; source: PageCitation }>;
+  };
+  suppliers: DocumentSupplierEvaluation[];
+  comparison: {
+    supplier_count: number;
+    directly_comparable_prices: boolean;
+    price_order: Array<{
+      document_id: string;
+      supplier_name: string;
+      amount: number;
+      currency: string;
+      source: PageCitation;
+    }>;
+    historical_price_comparison_performed: false;
+    notes: string[];
+  };
+  decision_support: {
+    review_priority: "STANDARD_REVIEW" | "ATTENTION_REQUIRED";
+    summary: string;
+    reasons: string[];
+    human_committee_required: true;
+    final_award_decision: null;
+  };
+  human_committee_required: true;
+  final_award_decision: null;
 }

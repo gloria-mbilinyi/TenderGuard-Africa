@@ -10,13 +10,15 @@ from datetime import UTC, datetime
 from hmac import compare_digest
 from pathlib import Path
 from typing import Annotated, Literal, cast
+from urllib.parse import unquote
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
+from app.agent.document_runner import execute_document_evaluation
 from app.agent.ollama_client import OllamaUnavailableError
 from app.api.browser_auth import (
     BrowserSession,
@@ -31,6 +33,10 @@ from app.api.models import (
     BrowserLoginRequest,
     BrowserSessionResponse,
     CatalogResponse,
+    CreateDocumentWorkspaceRequest,
+    DocumentEvaluationResponse,
+    DocumentWorkspace,
+    DocumentWorkspaceListResponse,
     EvaluationListResponse,
     EvaluationRequest,
     EvaluationResponse,
@@ -38,11 +44,20 @@ from app.api.models import (
     SystemStatusResponse,
 )
 from app.services.catalog import CatalogSelectionError, load_catalog, validate_catalog_selection
+from app.services.document_store import (
+    DocumentStoreError,
+    add_pdf_document,
+    create_workspace,
+    list_workspaces,
+    load_evaluation_result,
+    load_workspace,
+    max_pdf_bytes,
+)
 from app.services.evaluation_store import list_evaluation_summaries, save_evaluation
 from app.services.reports import list_generated_reports, resolve_generated_report
 from app.services.system_status import configured_model, ollama_model_status
 
-API_VERSION = "0.3.0"
+API_VERSION = "0.4.0"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 
@@ -130,6 +145,31 @@ async def _evaluation_with_http_errors(request: EvaluationRequest) -> Evaluation
         ) from exc
 
 
+async def _document_evaluation_with_http_errors(
+    workspace_id: str,
+) -> DocumentEvaluationResponse:
+    try:
+        return await execute_document_evaluation(workspace_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except DocumentStoreError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except OllamaUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The document workflow returned an invalid structured response.",
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Document evaluation unavailable; check Ollama and Procurement MCP services.",
+        ) from exc
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "tenderguard-africa", "version": API_VERSION}
@@ -181,6 +221,117 @@ def browser_catalog(
 ) -> CatalogResponse:
     del session
     return CatalogResponse.model_validate(load_catalog())
+
+
+@app.post("/api/browser/document-evaluations", response_model=DocumentWorkspace)
+def browser_create_document_workspace(
+    request: CreateDocumentWorkspaceRequest,
+    session: Annotated[BrowserSession, Depends(require_browser_csrf)],
+) -> DocumentWorkspace:
+    del session
+    return DocumentWorkspace.model_validate(create_workspace(request.title))
+
+
+@app.get(
+    "/api/browser/document-evaluations",
+    response_model=DocumentWorkspaceListResponse,
+)
+def browser_document_workspaces(
+    session: Annotated[BrowserSession, Depends(require_browser_session)],
+) -> DocumentWorkspaceListResponse:
+    del session
+    return DocumentWorkspaceListResponse.model_validate({"workspaces": list_workspaces()})
+
+
+@app.get(
+    "/api/browser/document-evaluations/{workspace_id}",
+    response_model=DocumentWorkspace,
+)
+def browser_document_workspace(
+    workspace_id: str,
+    session: Annotated[BrowserSession, Depends(require_browser_session)],
+) -> DocumentWorkspace:
+    del session
+    try:
+        return DocumentWorkspace.model_validate(load_workspace(workspace_id))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except DocumentStoreError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@app.post(
+    "/api/browser/document-evaluations/{workspace_id}/documents",
+    response_model=DocumentWorkspace,
+)
+async def browser_upload_document(
+    workspace_id: str,
+    request: Request,
+    session: Annotated[BrowserSession, Depends(require_browser_csrf)],
+    document_type: Annotated[
+        Literal["TENDER_REQUIREMENTS", "SUPPLIER_BID"], Query()
+    ],
+    x_file_name: Annotated[str, Header(alias="X-File-Name", max_length=300)],
+    supplier_name: Annotated[str | None, Query(max_length=200)] = None,
+) -> DocumentWorkspace:
+    del session
+    content_length = request.headers.get("content-length")
+    if content_length and content_length.isdigit() and int(content_length) > max_pdf_bytes():
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="The PDF exceeds the configured upload size limit.",
+        )
+    content = bytearray()
+    async for chunk in request.stream():
+        content.extend(chunk)
+        if len(content) > max_pdf_bytes():
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="The PDF exceeds the configured upload size limit.",
+            )
+    try:
+        workspace = add_pdf_document(
+            workspace_id,
+            filename=unquote(x_file_name),
+            content_type=request.headers.get("content-type", ""),
+            document_type=document_type,
+            content=bytes(content),
+            supplier_name=supplier_name,
+        )
+        return DocumentWorkspace.model_validate(workspace)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except DocumentStoreError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@app.post(
+    "/api/browser/document-evaluations/{workspace_id}/evaluate",
+    response_model=DocumentEvaluationResponse,
+)
+async def browser_evaluate_documents(
+    workspace_id: str,
+    session: Annotated[BrowserSession, Depends(require_browser_csrf)],
+) -> DocumentEvaluationResponse:
+    del session
+    return await _document_evaluation_with_http_errors(workspace_id)
+
+
+@app.get(
+    "/api/browser/document-evaluations/{workspace_id}/result",
+    response_model=DocumentEvaluationResponse,
+)
+def browser_document_evaluation_result(
+    workspace_id: str,
+    session: Annotated[BrowserSession, Depends(require_browser_session)],
+) -> DocumentEvaluationResponse:
+    del session
+    try:
+        return DocumentEvaluationResponse.model_validate(load_evaluation_result(workspace_id))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except (DocumentStoreError, ValidationError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @app.post("/api/browser/evaluations", response_model=EvaluationResponse)

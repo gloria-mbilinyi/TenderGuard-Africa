@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "tenderguard-procurement": {
+      "command": "C:\\absolute\\path\\to\\TenderGuard-Africa\\.venv\\Scripts\\tenderguard-procurement-mcp.exe",
+      "args": [],
+      "env": {
+        "TENDERGUARD_DOCUMENT_STORAGE": "C:\\absolute\\private\\path\\tenderguard-documents",
+        "TENDERGUARD_OLLAMA_URL": "http://127.0.0.1:11434/api/chat",
+        "TENDERGUARD_OLLAMA_MODEL": "qwen3:1.7b"
+      }
+    }
+  }
+}

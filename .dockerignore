@@ -19,6 +19,7 @@ tests
 frontend/node_modules
 frontend/dist
 .worktree-backups
+storage
 .vscode
 .idea
 .DS_Store

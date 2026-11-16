@@ -55,8 +55,8 @@ COPY --chown=tenderguard:tenderguard data ./data
 COPY --from=frontend-build --chown=tenderguard:tenderguard /src/frontend/dist ./frontend/dist
 COPY --chown=tenderguard:tenderguard pyproject.toml README.md LICENSE ./
 
-RUN mkdir --parents /app/reports \
-    && chown tenderguard:tenderguard /app/reports
+RUN mkdir --parents /app/reports /app/storage \
+    && chown tenderguard:tenderguard /app/reports /app/storage
 
 USER 10001:10001
 
