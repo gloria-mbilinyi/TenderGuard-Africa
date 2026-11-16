@@ -1,11 +1,12 @@
+import os
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
 
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-OLLAMA_MODEL = "qwen3:1.7b"
+OLLAMA_URL = os.getenv("TENDERGUARD_OLLAMA_URL", "http://localhost:11434/api/chat")
+OLLAMA_MODEL = os.getenv("TENDERGUARD_OLLAMA_MODEL", "qwen3:1.7b")
 
 
 class EvaluationPlan(BaseModel):
