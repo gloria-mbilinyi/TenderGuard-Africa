@@ -1,0 +1,6 @@
+.env*
+!.env.aws.example
+preflight-results*.json
+*.pem
+*.key
+backups/

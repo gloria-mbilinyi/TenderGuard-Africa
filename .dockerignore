@@ -20,6 +20,10 @@ frontend/node_modules
 frontend/dist
 .worktree-backups
 storage
+deploy/aws/.env*
+deploy/aws/*.pem
+deploy/aws/*.key
+deploy/aws/backups
 .vscode
 .idea
 .DS_Store

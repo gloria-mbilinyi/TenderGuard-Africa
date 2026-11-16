@@ -88,6 +88,8 @@ def test_docker_context_excludes_secrets_and_runtime_records():
     assert ".env.*" in dockerignore
     assert "reports/*" in dockerignore
     assert ".git" in dockerignore
+    assert "deploy/aws/.env*" in dockerignore
+    assert "deploy/aws/backups" in dockerignore
 
 
 def test_filesystem_mcp_is_pinned_read_only_and_reports_scoped(monkeypatch):

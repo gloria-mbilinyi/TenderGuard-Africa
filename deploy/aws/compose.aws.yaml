@@ -1,9 +1,16 @@
 name: tenderguard-africa-aws
 
+x-bounded-logs: &bounded-logs
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
     image: caddy:2.10.2-alpine
     restart: unless-stopped
+    logging: *bounded-logs
     environment:
       TENDERGUARD_DOMAIN: "${TENDERGUARD_DOMAIN:?Set a public DNS name for HTTPS}"
       TENDERGUARD_TLS_EMAIL: "${TENDERGUARD_TLS_EMAIL:?Set the TLS notification email}"
@@ -37,6 +44,7 @@ services:
         NODE_VERSION: "24.22.1"
         FILESYSTEM_MCP_VERSION: "2.3.0"
     restart: unless-stopped
+    logging: *bounded-logs
     environment:
       TENDERGUARD_API_KEY: "${TENDERGUARD_API_KEY:?Generate a private 32+ character API key}"
       TENDERGUARD_DASHBOARD_PASSWORD: "${TENDERGUARD_DASHBOARD_PASSWORD:?Set a private 12+ character dashboard password}"
@@ -70,6 +78,13 @@ services:
   ollama:
     image: ollama/ollama:0.40.14
     restart: unless-stopped
+    logging: *bounded-logs
+    environment:
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_MAX_QUEUE: "4"
+      OLLAMA_CONTEXT_LENGTH: "8192"
+      OLLAMA_KEEP_ALIVE: "30m"
     volumes:
       - ollama_models:/root/.ollama
     networks:
