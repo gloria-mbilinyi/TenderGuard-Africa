@@ -13,6 +13,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  public-demo-check:
+    # Public URL only: never supply passwords, API keys, or uploaded content.
+    # The dated probe skips after the requested demo window to avoid stale URL failures.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check the live demo from an independent network
+        run: |
+          python3 -m deploy.validation.public_demo \
+            --url https://educators-dictionaries-sink-gel.trycloudflare.com \
+            --until 2026-11-17T20:47:00+03:00
+
   docker-integration:
     # Standard public-repository runners are free. Never select a paid larger runner.
     if: github.event.repository.private == false

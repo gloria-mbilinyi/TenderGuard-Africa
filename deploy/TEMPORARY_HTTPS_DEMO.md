@@ -25,6 +25,30 @@ same Python module/arguments, and private local logs. The supervisor starts a se
 loopback-only server on port 8768, creates a temporary HTTPS tunnel, and stops its own
 two child processes after eight hours. It never opens an inbound firewall rule.
 
+An explicit extension can update the live supervisor without restarting the tunnel,
+backend, sessions, or data. Supply an exact timezone-aware cutoff within the next
+24 hours; the default initial duration remains eight hours:
+
+```powershell
+.\.venv\Scripts\python.exe -m deploy.temporary_demo --extend-until "2026-11-17T20:47:00+03:00"
+```
+
+The command succeeds only after the running supervisor acknowledges the new cutoff.
+Status exposes that effective expiry in UTC. Extensions cannot shorten the current
+window. A legacy supervisor started before live control was supported needs the
+one-time Windows watchdog takeover:
+
+```powershell
+.\.venv\Scripts\python.exe -m deploy.temporary_demo_watchdog --until "2026-11-17T20:47:00+03:00" --expected-supervisor RECORDED_WATCHDOG_PID
+```
+
+Run a takeover as a hidden background process. It checks the recorded watchdog,
+its exact loopback tunnel/backend command lines, executable paths, creation times,
+and stable Windows process handles before retiring only the old watchdog. It adopts
+the existing workers, including Windows venv delegates, and preserves their runtime
+files and password. The status heartbeat and `previous_supervisor_pid` confirm the
+actual transfer. Do not stop the old watchdog separately or use process-tree kills.
+
 ```powershell
 .\.venv\Scripts\python.exe -m deploy.temporary_demo --status
 .\.venv\Scripts\python.exe -m deploy.temporary_demo --stop

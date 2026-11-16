@@ -66,6 +66,51 @@ def current_run() -> Path:
     return run
 
 
+def parse_deadline(value: str) -> datetime:
+    deadline = datetime.fromisoformat(value)
+    if deadline.utcoffset() is None:
+        raise ValueError("The shutdown time must include a timezone, such as +03:00 for EAT.")
+    return deadline.astimezone(UTC)
+
+
+def requested_deadline(value: str, *, now: datetime | None = None) -> datetime:
+    deadline = parse_deadline(value)
+    now = now or datetime.now(UTC)
+    if not now < deadline <= now + timedelta(hours=24):
+        raise ValueError("Specify a future shutdown time within the next 24 hours.")
+    return deadline
+
+
+def read_deadline(run: Path, fallback: datetime) -> datetime:
+    try:
+        record = json.loads((run / "deadline.json").read_text(encoding="utf-8"))
+        if record["run_id"] != run.name:
+            return fallback
+        deadline = parse_deadline(record["expires_at"])
+        # A live update can extend, but cannot accidentally shorten, the current window.
+        return max(deadline, fallback)
+    except (OSError, ValueError, KeyError, TypeError):
+        return fallback
+
+
+def extend_until(value: str) -> None:
+    deadline = requested_deadline(value)
+    run = current_run()
+    state = json.loads((run / "status.json").read_text(encoding="utf-8"))
+    if state.get("status") != "RUNNING" or state.get("control_version") != 1:
+        raise RuntimeError("This supervisor needs a verified live watchdog takeover first.")
+    if deadline <= parse_deadline(state["expires_at"]):
+        raise ValueError("The new shutdown time must extend the running demo.")
+    write_json(run / "deadline.json", {"run_id": run.name, "expires_at": deadline.isoformat()})
+    for _ in range(15):
+        state = json.loads((run / "status.json").read_text(encoding="utf-8"))
+        if state.get("status") == "RUNNING" and parse_deadline(state["expires_at"]) == deadline:
+            print(f"Running demo acknowledged shutdown at {deadline.isoformat()}.")
+            return
+        time.sleep(1)
+    raise RuntimeError("The extension is pending; the running supervisor has not acknowledged it.")
+
+
 def stop_process(process: subprocess.Popen | None) -> None:
     if process is not None and process.poll() is None:
         process.terminate()
@@ -177,10 +222,19 @@ def serve(cloudflared: Path, port: int, hours: float) -> None:
                 time.sleep(1)
             else:
                 raise RuntimeError("The isolated backend did not become ready.")
-            state.update(status="RUNNING", url=url, port=port, supervisor_pid=os.getpid())
+            state.update(
+                status="RUNNING", url=url, port=port, supervisor_pid=os.getpid(), control_version=1
+            )
             write_json(run / "status.json", state)
             print(f"Temporary HTTPS demo ready: {url}", flush=True)
-            while datetime.now(UTC) < expires and not (run / "STOP").exists():
+            while not (run / "STOP").exists():
+                updated = read_deadline(run, expires)
+                if updated != expires:
+                    expires = updated
+                    state["expires_at"] = expires.isoformat()
+                    write_json(run / "status.json", state)
+                if datetime.now(UTC) >= expires:
+                    break
                 if tunnel.poll() is not None or server.poll() is not None:
                     raise RuntimeError("A temporary-demo process exited.")
                 time.sleep(1)
@@ -203,8 +257,13 @@ def main() -> None:
     parser.add_argument("--hours", type=float, default=8)
     parser.add_argument("--status", action="store_true")
     parser.add_argument("--stop", action="store_true")
+    parser.add_argument(
+        "--extend-until", help="Explicit timezone-aware shutdown time; next 24 hours"
+    )
     args = parser.parse_args()
-    if args.status:
+    if args.extend_until:
+        extend_until(args.extend_until)
+    elif args.status:
         print((current_run() / "status.json").read_text(encoding="utf-8"))
     elif args.stop:
         (current_run() / "STOP").touch()
@@ -212,7 +271,7 @@ def main() -> None:
     elif args.cloudflared:
         serve(args.cloudflared, args.port, args.hours)
     else:
-        parser.error("Provide --cloudflared, --status, or --stop.")
+        parser.error("Provide --cloudflared, --status, --extend-until, or --stop.")
 
 
 if __name__ == "__main__":
