@@ -73,6 +73,7 @@ jobs:
           TENDERGUARD_OLLAMA_URL: http://127.0.0.1:11434/api/chat
         run: |
           python -m pytest -q
+          python -m deploy.validation.model_readiness
           python -m deploy.validation.smoke --project "$TG_VERIFY_PROJECT" --ca-file "$RUNNER_TEMP/tenderguard-test-ca.crt"
       - name: Remove only the isolated verification project
         if: always() && env.TG_VERIFY_PROJECT != ''

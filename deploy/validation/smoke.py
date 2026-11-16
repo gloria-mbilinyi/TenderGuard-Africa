@@ -175,7 +175,17 @@ def main() -> None:
     parser.add_argument("--project", required=True)
     parser.add_argument("--ca-file", type=Path, required=True)
     args = parser.parse_args()
-    run(args.project, args.ca_file)
+    try:
+        run(args.project, args.ca_file)
+    except Exception:
+        # Import here to avoid a module cycle. Preserve the original test failure.
+        from deploy.validation.model_readiness import sanitized_diagnostics
+
+        try:
+            print(json.dumps(sanitized_diagnostics(args.project)))
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            print("Sanitized model diagnostics were unavailable.")
+        raise
 
 
 if __name__ == "__main__":
