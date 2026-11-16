@@ -18,7 +18,8 @@ The default Compose project starts one TenderGuard container containing:
 - read-only synthetic procurement data.
 
 The dashboard and API are published only on `127.0.0.1:8000`. Reports and audit records use the
-`tenderguard_reports` named volume. The application runs as an unprivileged user with
+`tenderguard_reports` named volume, while uploaded PDFs and extracted evidence use
+`tenderguard_documents`. The application runs as an unprivileged user with
 a read-only root filesystem, no Linux capabilities, and no-new-privileges enabled.
 
 Ollama can run on the host (Option A) or in an optional container (Option B). In both
@@ -229,7 +230,7 @@ model or run a procurement evaluation.
 Open `http://127.0.0.1:8000` to use the web dashboard and sign in with the dashboard
 password configured in `.env`. The browser never receives the programmatic API key.
 
-## 8. Run the synthetic evaluation
+## 8. Run an evaluation
 
 Read the API key back from `.env`, send the demo request, and inspect the result:
 
@@ -257,6 +258,10 @@ AWAITING_HUMAN_REVIEW
 
 `final_award_decision` must be `null`. The Beta bid should have review priority
 `ATTENTION_REQUIRED`. This is decision support, not bidder rejection or award.
+
+For the searchable-PDF workflow, sign in to the dashboard, open **PDF workspaces**,
+and upload the three files from `demo_documents/`. This runs the same real
+Qwen/LangGraph/MCP pipeline documented in [PDF_EVALUATION.md](PDF_EVALUATION.md).
 
 ## 9. Find audit records and reports
 
@@ -410,10 +415,11 @@ appear.
   authentication or multi-user authorization.
 - The API returns decision-support summaries but does not serve raw supplier files,
   reports, or audit logs.
-- Synthetic data is baked into the read-only image. There is no upload endpoint in this
-  phase. Identifiers are validated and model prompts label evidence fields as untrusted
-  data, but production ingestion still needs schema validation, malware scanning, and
-  stronger prompt-injection defenses.
+- Synthetic structured data is baked into the read-only image. Searchable PDF uploads
+  are validated, bounded, stored in a separate volume, and treated as untrusted data.
+  A production ingestion tier still needs defense-in-depth malware scanning, content
+  disarm policy, institutional retention controls, and stronger prompt-injection
+  monitoring.
 - Named human approval does not verify the person's identity. Production deployments
   need authenticated reviewers and authorization at both API and MCP boundaries.
 - Named volumes are not automatically encrypted or backed up. Protect the Docker host,
@@ -421,5 +427,6 @@ appear.
 - The first build and model pull require internet access. Fully offline operation is
   possible only after all images, packages, and model weights are present locally and
   the exact offline workflow has been tested.
-- Phase 2 does not add public remote MCP, cloud hosting, payment processing, or license
-  enforcement. Those remain later-phase work.
+- The package does not expose public remote MCP, payment processing, or license
+  enforcement. The AWS Compose artifacts are a deployment plan and have not been
+  provisioned; see `deploy/aws/README.md`.

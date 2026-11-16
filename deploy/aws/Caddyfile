@@ -1,0 +1,18 @@
+{
+	email {$TENDERGUARD_TLS_EMAIL}
+	admin off
+}
+
+{$TENDERGUARD_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	reverse_proxy tenderguard:8000
+}

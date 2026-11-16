@@ -34,11 +34,40 @@ def test_compose_defaults_to_localhost_and_persistent_reports():
         "${TENDERGUARD_BIND_ADDRESS:-127.0.0.1}:${TENDERGUARD_PORT:-8000}:8000"
     ]
     assert "tenderguard_reports:/app/reports" in service["volumes"]
+    assert "tenderguard_documents:/app/storage" in service["volumes"]
     assert service["read_only"] is True
     assert service["cap_drop"] == ["ALL"]
     assert "no-new-privileges:true" in service["security_opt"]
     assert "TENDERGUARD_DASHBOARD_PASSWORD" in service["environment"]
     assert "tenderguard_reports" in compose["volumes"]
+    assert "tenderguard_documents" in compose["volumes"]
+
+
+def test_aws_compose_exposes_only_tls_edge_and_keeps_services_private():
+    compose = yaml.safe_load(_read("deploy/aws/compose.aws.yaml"))
+    caddy = compose["services"]["caddy"]
+    tenderguard = compose["services"]["tenderguard"]
+    ollama = compose["services"]["ollama"]
+
+    assert caddy["ports"] == ["80:80", "443:443", "443:443/udp"]
+    assert "ports" not in tenderguard
+    assert tenderguard["expose"] == ["8000"]
+    assert "ports" not in ollama
+    assert ollama["expose"] == ["11434"]
+    assert tenderguard["environment"]["TENDERGUARD_COOKIE_SECURE"] == "true"
+    assert tenderguard["environment"]["TENDERGUARD_ALLOWED_ORIGINS"].startswith("https://")
+    assert "tenderguard_documents:/app/storage" in tenderguard["volumes"]
+    assert tenderguard["read_only"] is True
+    assert tenderguard["cap_drop"] == ["ALL"]
+
+
+def test_aws_caddy_terminates_https_and_proxies_only_to_tenderguard():
+    caddyfile = _read("deploy/aws/Caddyfile")
+
+    assert "{$TENDERGUARD_DOMAIN}" in caddyfile
+    assert "reverse_proxy tenderguard:8000" in caddyfile
+    assert "Strict-Transport-Security" in caddyfile
+    assert "ollama:11434" not in caddyfile
 
 
 def test_compose_ollama_is_optional_and_does_not_auto_pull_models():

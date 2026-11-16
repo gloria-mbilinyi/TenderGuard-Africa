@@ -508,3 +508,49 @@ The shared API key and named report approver are local prototype controls. Produ
 deployment still requires authenticated reviewer identities, role-based authorization,
 tenant isolation, encrypted storage, and tamper-evident audit retention.
 
+
+16\. Searchable PDF Evaluation Architecture
+
+```text
+Authenticated browser / installed MCP client
+        |
+        v
+Isolated evaluation workspace
+  one tender PDF + two or more supplier bid PDFs
+        |
+        v
+Bounded validation -> pypdf page extraction -> stored page evidence
+        |
+        v
+Qwen planner -> LangGraph -> Procurement MCP page-cited checks
+        |
+        v
+Deterministic supplier comparison -> Qwen evidence synthesis
+        |
+        v
+AWAITING_HUMAN_REVIEW / final_award_decision = null
+        |
+        v
+Separate named CLI authorization -> draft report -> protected download
+```
+
+Raw PDFs are never interpreted as executable instructions. The store rejects invalid,
+encrypted, active-content, over-limit, and non-searchable files; uses server-generated
+identifiers and atomic metadata writes; and keeps source PDFs outside application
+source. Findings distinguish verified evidence from missing, ambiguous, and
+human-assessment states. Page citations identify the document, filename, page, and
+supporting quote.
+
+The downloadable stdio MCP exposes bounded workspace, ingestion, evaluation, status,
+result, and separately authorized draft-report tools. It accepts PDF bytes rather than
+arbitrary server paths and does not expose award actions or general filesystem access.
+
+
+17\. Prepared AWS Edge Architecture
+
+The unprovisioned `deploy/aws/` package places Caddy on ports 80/443 in front of the
+existing application. FastAPI, Ollama, and MCP remain on a private Compose network.
+Secure cookies and an exact HTTPS origin are required. Uploaded PDFs, reports/audit,
+Ollama weights, and TLS state use separate persistent volumes. No AWS resources are
+created until billing credit and explicit cost approval are verified.
+

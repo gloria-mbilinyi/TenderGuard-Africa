@@ -195,6 +195,28 @@ Open `http://127.0.0.1:5173`. See
 [`docs/WEB_DASHBOARD.md`](docs/WEB_DASHBOARD.md) for the complete development,
 production-build, Docker, authentication, and security-boundary guide.
 
+### Searchable PDF supplier comparison
+
+The authenticated **PDF workspaces** page accepts one tender requirements PDF and at
+least two supplier bid PDFs. It validates and extracts searchable documents, shows
+safe previews, executes the real Qwen/LangGraph/Procurement MCP workflow, and presents
+page-cited supplier findings. The autonomous result always stops at human review and
+never contains an award.
+
+The repository includes three visibly synthetic demonstration PDFs. A CLI run of the
+same workflow is:
+
+```powershell
+.\.venv\Scripts\python.exe -m app.agent.run_documents `
+  --tender demo_documents\tender_requirements_synthetic.pdf `
+  --bid demo_documents\alpha_supplier_bid_synthetic.pdf `
+  --bid demo_documents\beta_supplier_bid_synthetic.pdf
+```
+
+See [PDF evaluation](docs/PDF_EVALUATION.md), the
+[Nairobi demo runbook](docs/NAIROBI_DEMO_RUNBOOK.md), and the
+[downloadable MCP guide](docs/MCP_INSTALLATION.md).
+
 ---
 
 ## Docker Quick Start
@@ -239,7 +261,8 @@ docker compose --profile ollama up -d
 ```
 
 Model downloads are deliberately not part of application startup. Named volumes keep
-reports, audit records, and Dockerized Ollama models across ordinary restarts. See
+uploaded documents, reports, audit records, and Dockerized Ollama models across
+ordinary restarts. See
 [`docs/DOCKER_INSTALLATION.md`](docs/DOCKER_INSTALLATION.md) for the complete Windows
 and Linux setup, API evaluation command, persistence checks, and troubleshooting.
 
@@ -467,7 +490,7 @@ TenderGuard includes its own MCP server:
 TenderGuard Procurement MCP
 ```
 
-It exposes five procurement tools.
+It exposes the original structured-data tools plus bounded uploaded-document tools.
 
 ### `load_tender`
 
@@ -521,6 +544,17 @@ to contain the name of a human approver.
 Without named human approval, report generation is blocked.
 
 The tool does not award or reject a tender.
+
+### Uploaded-document tools
+
+`create_document_evaluation_workspace`, `ingest_pdf_document`, and
+`get_document_evaluation_status` manage one isolated tender-plus-bids workspace without
+accepting arbitrary server filesystem paths. `load_document_workspace` and
+`evaluate_document_workspace` provide deterministic, page-cited evidence to the real
+LangGraph workflow. `run_document_agent_evaluation` executes that workflow through
+Ollama, while `get_document_evaluation_result` returns only the completed human-review
+result. `generate_document_evaluation_report` retains the separate named-human draft
+report gate and never makes an award.
 
 ---
 
