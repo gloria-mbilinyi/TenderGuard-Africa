@@ -210,6 +210,12 @@ class EvaluationListResponse(BaseModel):
 class ReportItem(BaseModel):
     filename: str
     bid_id: str
+    tender_title: str | None = None
+    supplier_names: list[str] = Field(default_factory=list)
+    workspace_id: str | None = None
+    generated_at: str | None = None
+    approved_by: str | None = None
+    authorizer_identity_verified: Literal[False] = False
     status: Literal["DRAFT_FOR_COMMITTEE_REVIEW"]
     size_bytes: int
     modified_at: str
