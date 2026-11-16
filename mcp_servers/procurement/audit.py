@@ -1,15 +1,15 @@
 import json
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
-
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 AUDIT_LOG_FILE = PROJECT_ROOT / "reports" / "audit_log.jsonl"
 
 
 def _timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def log_tool_call(

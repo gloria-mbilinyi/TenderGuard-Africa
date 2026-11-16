@@ -1,0 +1,49 @@
+name: tenderguard-africa
+
+services:
+  tenderguard:
+    image: tenderguard-africa:0.2.0
+    build:
+      context: .
+      args:
+        PYTHON_VERSION: "3.12.16"
+        NODE_VERSION: "24.22.1"
+        FILESYSTEM_MCP_VERSION: "2.3.0"
+    environment:
+      TENDERGUARD_API_KEY: "${TENDERGUARD_API_KEY:?Generate TENDERGUARD_API_KEY in .env}"
+      TENDERGUARD_OLLAMA_URL: "${TENDERGUARD_OLLAMA_URL:-http://host.docker.internal:11434/api/chat}"
+      TENDERGUARD_OLLAMA_MODEL: "${TENDERGUARD_OLLAMA_MODEL:-qwen3:1.7b}"
+      TENDERGUARD_FILESYSTEM_MCP_COMMAND: /opt/filesystem-mcp/node_modules/.bin/mcp-server-filesystem
+    ports:
+      - "${TENDERGUARD_BIND_ADDRESS:-127.0.0.1}:${TENDERGUARD_PORT:-8000}:8000"
+    volumes:
+      - tenderguard_reports:/app/reports
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:0.40.14
+    profiles:
+      - ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  tenderguard_reports:
+  ollama_models:

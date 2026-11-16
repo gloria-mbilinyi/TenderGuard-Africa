@@ -26,50 +26,52 @@ async def call_procurement_tool(
         ],
     )
 
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
+    async with (
+        stdio_client(server_params) as (read, write),
+        ClientSession(read, write) as session,
+    ):
+        await session.initialize()
 
-            result = await session.call_tool(
-                tool_name,
-                arguments=arguments,
-            )
+        result = await session.call_tool(
+            tool_name,
+            arguments=arguments,
+        )
 
-            if result.is_error:
-                messages = [
-                    block.text
-                    for block in result.content
-                    if isinstance(block, TextContent)
-                ]
-
-                raise RuntimeError(
-                    "; ".join(messages)
-                    or f"MCP tool '{tool_name}' failed"
-                )
-
-            if result.structured_content is not None:
-                return dict(result.structured_content)
-
-            text_blocks = [
+        if result.is_error:
+            messages = [
                 block.text
                 for block in result.content
                 if isinstance(block, TextContent)
             ]
 
-            if not text_blocks:
-                return {}
+            raise RuntimeError(
+                "; ".join(messages)
+                or f"MCP tool '{tool_name}' failed"
+            )
 
-            text = "\n".join(text_blocks)
+        if result.structured_content is not None:
+            return dict(result.structured_content)
 
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError:
-                return {"text": text}
+        text_blocks = [
+            block.text
+            for block in result.content
+            if isinstance(block, TextContent)
+        ]
 
-            if isinstance(parsed, dict):
-                return parsed
+        if not text_blocks:
+            return {}
 
-            return {"result": parsed}
+        text = "\n".join(text_blocks)
+
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return {"text": text}
+
+        if isinstance(parsed, dict):
+            return parsed
+
+        return {"result": parsed}
 
 
 async def list_procurement_tools() -> list[str]:
@@ -83,13 +85,12 @@ async def list_procurement_tools() -> list[str]:
         ],
     )
 
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
+    async with (
+        stdio_client(server_params) as (read, write),
+        ClientSession(read, write) as session,
+    ):
+        await session.initialize()
 
-            response = await session.list_tools()
+        response = await session.list_tools()
 
-            return [
-                tool.name
-                for tool in response.tools
-            ]
+        return [tool.name for tool in response.tools]

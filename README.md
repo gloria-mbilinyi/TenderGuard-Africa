@@ -164,6 +164,54 @@ This is intentional. The autonomous agent is not allowed to continue to a procur
 
 ---
 
+## Docker Quick Start
+
+Docker packages the FastAPI application, LangGraph workflow, Procurement MCP server,
+and the borrowed Filesystem MCP server as a self-hosted agent. It uses only free and
+open-source runtime components. The API is published on `127.0.0.1` by default and
+still stops every autonomous evaluation at `AWAITING_HUMAN_REVIEW`.
+
+Prerequisites:
+
+- Docker Desktop on Windows, or Docker Engine with the Compose plugin on Linux;
+- either Ollama on the host, or the optional Ollama Compose profile;
+- enough disk space for the container images and `qwen3:1.7b` model.
+
+From the repository root in PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+$apiKey = [guid]::NewGuid().ToString("N")
+(Get-Content .env) -replace '^TENDERGUARD_API_KEY=.*$', "TENDERGUARD_API_KEY=$apiKey" | Set-Content .env
+ollama pull qwen3:1.7b
+docker compose build
+docker compose up -d
+docker compose ps
+Invoke-RestMethod http://127.0.0.1:8000/api/health
+```
+
+The default `.env.example` connects the container to host Ollama through
+`host.docker.internal`. To use Dockerized Ollama instead, set
+`TENDERGUARD_OLLAMA_URL=http://ollama:11434/api/chat`, start the `ollama` profile,
+and pull the model into its persistent volume once:
+
+```powershell
+docker compose --profile ollama up -d ollama
+docker compose exec ollama ollama pull qwen3:1.7b
+docker compose --profile ollama up -d
+```
+
+Model downloads are deliberately not part of application startup. Named volumes keep
+reports, audit records, and Dockerized Ollama models across ordinary restarts. See
+[`docs/DOCKER_INSTALLATION.md`](docs/DOCKER_INSTALLATION.md) for the complete Windows
+and Linux setup, API evaluation command, persistence checks, and troubleshooting.
+
+The first installation requires internet access to download images, dependencies, and
+the model. Do not assume fully offline operation until those artifacts have been
+downloaded and the deployment has been tested locally.
+
+---
+
 ## Manual Setup
 
 Create and activate the Python environment:

@@ -15,7 +15,6 @@ from mcp_servers.procurement.tools.generate_evaluation_report import (
 )
 from mcp_servers.procurement.tools.load_tender import load_tender_record
 
-
 mcp = MCPServer("TenderGuard Procurement MCP")
 
 

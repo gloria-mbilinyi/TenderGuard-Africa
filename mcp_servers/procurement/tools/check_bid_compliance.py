@@ -3,7 +3,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TENDER_DATA_DIR = PROJECT_ROOT / "data" / "ocds"
 BID_DATA_DIR = PROJECT_ROOT / "data" / "synthetic_bids"
@@ -47,8 +46,8 @@ def check_bid_compliance_record(
             f"Bid '{bid_id}' does not belong to tender '{tender_id}'"
         )
 
-    tender_source = str(tender_path.relative_to(PROJECT_ROOT))
-    bid_source = str(bid_path.relative_to(PROJECT_ROOT))
+    tender_source = tender_path.relative_to(PROJECT_ROOT).as_posix()
+    bid_source = bid_path.relative_to(PROJECT_ROOT).as_posix()
 
     sources = [tender_source, bid_source]
 

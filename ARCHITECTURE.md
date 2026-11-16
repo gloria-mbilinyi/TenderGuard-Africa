@@ -420,3 +420,42 @@ A future version would add:
 TenderGuard Africa prepares the procurement evaluation file.
 The human procurement committee decides.
 
+
+14\. Docker Deployment Architecture
+
+The distributable deployment keeps the existing application layers intact:
+
+```text
+Host browser or API client
+        |
+        | 127.0.0.1:8000 + X-TenderGuard-Key
+        v
+TenderGuard container (unprivileged UID 10001)
+        |
+        +--> FastAPI evaluation-only interface
+        +--> LangGraph orchestration
+        +--> Procurement MCP over local stdio
+        +--> Filesystem MCP over local stdio (read-only reports/ scope)
+        +--> reports/ named volume (audit records and draft reports)
+        |
+        +--> Host Ollama through host.docker.internal
+        |                 or
+        +--> Optional Ollama profile on the private Compose network
+                          |
+                          +--> persistent model volume
+```
+
+The application image contains Python 3.12, Node.js 24, and a pinned Filesystem MCP
+server. The image does not contain `.env` files, API keys, generated audit records, or
+model weights. Its root filesystem is read-only at runtime, Linux capabilities are
+dropped, and only `/tmp` plus the reports volume are writable.
+
+Docker packaging does not duplicate or bypass evaluation logic. Both local and
+container execution use the same LangGraph, MCP tools, Ollama provider, audit service,
+and human-review state. The optional Ollama service does not download a model during
+startup; an operator explicitly pulls the configured model into its persistent volume.
+
+The shared API key and named report approver are local prototype controls. Production
+deployment still requires authenticated reviewer identities, role-based authorization,
+tenant isolation, encrypted storage, and tamper-evident audit retention.
+

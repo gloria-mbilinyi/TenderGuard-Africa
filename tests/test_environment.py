@@ -1,8 +1,8 @@
 ﻿def test_project_environment():
-    import mcp
-    import langgraph
-    import pydantic
     import httpx
+    import langgraph
+    import mcp
+    import pydantic
     import pypdf
 
     assert mcp is not None

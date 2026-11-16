@@ -3,7 +3,6 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 BID_DATA_DIR = PROJECT_ROOT / "data" / "synthetic_bids"
 HISTORY_FILE = PROJECT_ROOT / "data" / "ocds" / "historical_awards.json"
@@ -71,9 +70,7 @@ def compare_bid_price(bid_id: str) -> dict[str, Any]:
                 "award_date": award.get("date"),
                 "amount": amount,
                 "currency": currency,
-                "source_file": str(
-                    HISTORY_FILE.relative_to(PROJECT_ROOT)
-                ),
+                "source_file": HISTORY_FILE.relative_to(PROJECT_ROOT).as_posix(),
             }
         )
 
@@ -148,10 +145,8 @@ def compare_bid_price(bid_id: str) -> dict[str, Any]:
         "risk_level": risk_level,
         "finding": finding,
         "sources": {
-            "bid": str(bid_path.relative_to(PROJECT_ROOT)),
-            "historical_awards": str(
-                HISTORY_FILE.relative_to(PROJECT_ROOT)
-            ),
+            "bid": bid_path.relative_to(PROJECT_ROOT).as_posix(),
+            "historical_awards": HISTORY_FILE.relative_to(PROJECT_ROOT).as_posix(),
         },
         "evidence": comparable_awards,
         "decision_note": (

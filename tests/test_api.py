@@ -5,10 +5,11 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
+from app.agent.ollama_client import OllamaUnavailableError
 from app.api.main import app
 
-
 client = TestClient(app)
+TEST_API_KEY = "test-key-0123456789abcdef0123456789abcdef"
 
 
 def _stub_agent(monkeypatch, state):
@@ -16,6 +17,18 @@ def _stub_agent(monkeypatch, state):
         async def ainvoke(self, request):
             assert request["status"] == "STARTED"
             return state
+
+    monkeypatch.setitem(
+        sys.modules,
+        "app.agent.workflow",
+        SimpleNamespace(procurement_agent=StubAgent()),
+    )
+
+
+def _stub_failing_agent(monkeypatch, error):
+    class StubAgent:
+        async def ainvoke(self, request):
+            raise error
 
     monkeypatch.setitem(
         sys.modules,
@@ -37,8 +50,14 @@ def test_evaluation_requires_configured_key(monkeypatch):
     assert response.status_code == 503
 
 
+def test_evaluation_rejects_short_configured_key(monkeypatch):
+    monkeypatch.setenv("TENDERGUARD_API_KEY", "too-short")
+    response = client.post("/api/evaluations", json={"tender_id": "TG-1", "bid_id": "BID-1"})
+    assert response.status_code == 503
+
+
 def test_evaluation_rejects_missing_or_invalid_key(monkeypatch):
-    monkeypatch.setenv("TENDERGUARD_API_KEY", "secret-test-key")
+    monkeypatch.setenv("TENDERGUARD_API_KEY", TEST_API_KEY)
     data = {"tender_id": "TG-1", "bid_id": "BID-1"}
     assert client.post("/api/evaluations", json=data).status_code == 401
     assert client.post(
@@ -47,7 +66,7 @@ def test_evaluation_rejects_missing_or_invalid_key(monkeypatch):
 
 
 def test_evaluation_returns_only_human_review(monkeypatch):
-    monkeypatch.setenv("TENDERGUARD_API_KEY", "secret-test-key")
+    monkeypatch.setenv("TENDERGUARD_API_KEY", TEST_API_KEY)
     _stub_agent(
         monkeypatch,
         {
@@ -59,7 +78,7 @@ def test_evaluation_returns_only_human_review(monkeypatch):
     response = client.post(
         "/api/evaluations",
         json={"tender_id": "TG-1", "bid_id": "BID-1"},
-        headers={"X-TenderGuard-Key": "secret-test-key"},
+        headers={"X-TenderGuard-Key": TEST_API_KEY},
     )
     assert response.status_code == 200, response.text
     result = response.json()
@@ -70,7 +89,7 @@ def test_evaluation_returns_only_human_review(monkeypatch):
 
 
 def test_evaluation_refuses_automatic_award(monkeypatch):
-    monkeypatch.setenv("TENDERGUARD_API_KEY", "secret-test-key")
+    monkeypatch.setenv("TENDERGUARD_API_KEY", TEST_API_KEY)
     _stub_agent(
         monkeypatch,
         {
@@ -81,16 +100,31 @@ def test_evaluation_refuses_automatic_award(monkeypatch):
     response = client.post(
         "/api/evaluations",
         json={"tender_id": "TG-1", "bid_id": "BID-1"},
-        headers={"X-TenderGuard-Key": "secret-test-key"},
+        headers={"X-TenderGuard-Key": TEST_API_KEY},
     )
     assert response.status_code == 500
 
 
 def test_evaluation_blocks_invalid_identifiers(monkeypatch):
-    monkeypatch.setenv("TENDERGUARD_API_KEY", "secret-test-key")
+    monkeypatch.setenv("TENDERGUARD_API_KEY", TEST_API_KEY)
     response = client.post(
         "/api/evaluations",
         json={"tender_id": "../private", "bid_id": "BID-1"},
-        headers={"X-TenderGuard-Key": "secret-test-key"},
+        headers={"X-TenderGuard-Key": TEST_API_KEY},
     )
     assert response.status_code == 422
+
+
+def test_evaluation_reports_clear_ollama_error(monkeypatch):
+    monkeypatch.setenv("TENDERGUARD_API_KEY", TEST_API_KEY)
+    _stub_failing_agent(
+        monkeypatch,
+        OllamaUnavailableError("Ollama is unavailable; start it and pull qwen3:1.7b."),
+    )
+    response = client.post(
+        "/api/evaluations",
+        json={"tender_id": "TG-1", "bid_id": "BID-1"},
+        headers={"X-TenderGuard-Key": TEST_API_KEY},
+    )
+    assert response.status_code == 503
+    assert "Ollama is unavailable" in response.json()["detail"]

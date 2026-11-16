@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 BID_DATA_DIR = PROJECT_ROOT / "data" / "synthetic_bids"
 SUPPLIER_HISTORY_FILE = PROJECT_ROOT / "data" / "ocds" / "supplier_history.json"
@@ -46,10 +45,8 @@ def flag_supplier_risk_record(bid_id: str) -> dict[str, Any]:
     flags: list[dict[str, Any]] = []
     history = _load_supplier_history()
 
-    bid_source = str(bid_path.relative_to(PROJECT_ROOT))
-    history_source = str(
-        SUPPLIER_HISTORY_FILE.relative_to(PROJECT_ROOT)
-    )
+    bid_source = bid_path.relative_to(PROJECT_ROOT).as_posix()
+    history_source = SUPPLIER_HISTORY_FILE.relative_to(PROJECT_ROOT).as_posix()
 
     if not supplier_identifier:
         flags.append(

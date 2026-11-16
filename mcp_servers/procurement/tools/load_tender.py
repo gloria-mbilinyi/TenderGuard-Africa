@@ -34,7 +34,7 @@ def load_tender_record(tender_id: str) -> dict[str, Any]:
             "amount": value.get("amount"),
             "currency": value.get("currency"),
             "procuring_entity": procuring_entity.get("name"),
-            "source_file": str(file_path.relative_to(PROJECT_ROOT)),
+            "source_file": file_path.relative_to(PROJECT_ROOT).as_posix(),
         }
 
     raise FileNotFoundError(f"Tender '{tender_id}' was not found")

@@ -11,7 +11,7 @@ def test_load_tender_record():
     assert result["amount"] == 45000000
     assert result["currency"] == "TZS"
     assert result["ocid"] == "ocds-demo-tz-001"
-    assert result["source_file"] == "data\\ocds\\demo_tender.json"
+    assert result["source_file"] == "data/ocds/demo_tender.json"
 
 
 def test_load_tender_rejects_unknown_tender():

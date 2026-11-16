@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -11,14 +11,13 @@ from mcp_servers.procurement.tools.flag_supplier_risk import (
 )
 from mcp_servers.procurement.tools.load_tender import load_tender_record
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 REPORTS_DIR = PROJECT_ROOT / "reports"
 
 
 def _report_path_for_output(report_path: Path) -> str:
     try:
-        return str(report_path.relative_to(PROJECT_ROOT))
+        return report_path.relative_to(PROJECT_ROOT).as_posix()
     except ValueError:
         return str(report_path)
 
@@ -56,7 +55,7 @@ def generate_evaluation_report_file(
     )
 
     report_path = REPORTS_DIR / f"{safe_bid_id}_evaluation_report.md"
-    generated_at = datetime.now(timezone.utc).isoformat()
+    generated_at = datetime.now(UTC).isoformat()
 
     compliance_lines = []
 

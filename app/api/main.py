@@ -11,9 +11,11 @@ from typing import Any, Literal
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app.agent.ollama_client import OllamaUnavailableError
+
 app = FastAPI(
     title="TenderGuard Africa API",
-    version="0.1.0",
+    version="0.2.0",
     description="Local evaluation API; procurement decisions require human review.",
 )
 
@@ -35,10 +37,10 @@ class EvaluationResponse(BaseModel):
 
 def require_local_api_key(x_tenderguard_key: str | None = Header(default=None)) -> None:
     expected = os.getenv("TENDERGUARD_API_KEY", "")
-    if not expected:
+    if len(expected) < 32:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Set TENDERGUARD_API_KEY before using the evaluation endpoint.",
+            detail="Set TENDERGUARD_API_KEY to a private value of at least 32 characters.",
         )
     if not x_tenderguard_key or not compare_digest(x_tenderguard_key, expected):
         raise HTTPException(
@@ -69,6 +71,11 @@ async def evaluate_bid(request: EvaluationRequest) -> EvaluationResponse:
                 "status": "STARTED",
             }
         )
+    except OllamaUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
