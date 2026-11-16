@@ -1,0 +1,13 @@
+# Test-only overrides. Never use this file for a public deployment.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:8443:443"
+    volumes:
+      - ./../validation/Caddyfile:/etc/caddy/Caddyfile:ro
+  tenderguard:
+    environment:
+      TENDERGUARD_ALLOWED_ORIGINS: https://localhost:8443
+  ollama:
+    ports:
+      - "127.0.0.1:11434:11434"
