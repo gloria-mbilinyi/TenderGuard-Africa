@@ -79,7 +79,7 @@ def verify_evaluation(client: httpx.Client, origin: str, csrf: str) -> str:
         client.post(
             "/api/browser/document-evaluations",
             headers=headers,
-            json={"title": "AWS synthetic PDF deployment verification"},
+            json={"title": "Synthetic PDF deployment verification"},
         ),
         200,
         "Create workspace",

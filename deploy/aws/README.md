@@ -190,7 +190,7 @@ The cloud-only Compose file keeps one Qwen model loaded, serializes model infere
 bounds the Ollama queue, configures an 8192-token context, and rotates local container
 logs at 10 MB × 3 per service. These settings do not change Windows/local Compose.
 Larger context increases RAM use; verify `sudo docker stats --no-stream` and
-`sudo docker compose --env-file .env -f compose.aws.yaml exec ollama ollama ps` after
+`sudo docker compose --env-file deploy/aws/.env -f deploy/aws/compose.aws.yaml exec ollama ollama ps` after
 the real evaluation. FastAPI/Pydantic validation and the existing model timeouts stay
 enabled. Diagnose any invalid structured response rather than accepting invalid data.
 
@@ -203,7 +203,7 @@ not put backup archives in public S3 or Git.
 To stop only the application while retaining data:
 
 ```bash
-sudo docker compose --env-file .env -f compose.aws.yaml down
+sudo docker compose --env-file deploy/aws/.env -f deploy/aws/compose.aws.yaml down
 ```
 
 Restart with the same `.env`, project name, and volumes using `up -d`. Never use

@@ -140,6 +140,12 @@ directories back to the same project root while the API is stopped.
 
 ## 6. Screen recording
 
+The optional [temporary HTTPS demo](../deploy/TEMPORARY_HTTPS_DEMO.md) runs as a
+separate loopback process, with separate workspaces and credentials. It does not
+replace or require changes to this Windows fallback. Check its status and expiry
+before sharing its URL; keep the local path and rehearsal recording ready if the
+laptop's external connection fails.
+
 - Use Windows Snipping Tool screen recording or OBS configured for the TenderGuard
   browser window only.
 - Hide terminals while passwords/environment variables are being entered.
