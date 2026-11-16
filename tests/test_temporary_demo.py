@@ -1,11 +1,29 @@
 """Temporary HTTPS processes must stay inside their own time and storage boundaries."""
 
 import json
+import os
+import stat
+import subprocess
 from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from deploy import temporary_demo
+
+
+def test_credential_directory_is_private_and_does_not_print_identity(tmp_path, capsys):
+    private = tmp_path / "private"
+    temporary_demo.private_directory(private)
+    if os.name == "nt":
+        acl = subprocess.run(
+            ["icacls", str(private)], capture_output=True, text=True, check=True
+        ).stdout
+        # A mandatory integrity label can inherit without granting file access.
+        assert "(I)(OI)(CI)(F)" not in acl
+        assert acl.count("(OI)(CI)(F)") == 2
+    else:
+        assert stat.S_IMODE(private.stat().st_mode) == 0o700
+    assert capsys.readouterr().out == ""
 
 
 def test_temporary_demo_stop_cannot_escape_runtime_boundary(tmp_path, monkeypatch):
