@@ -61,7 +61,7 @@ jobs:
       - name: Build and start isolated validation containers
         run: |
           docker compose -p "$TG_VERIFY_PROJECT" -f deploy/aws/compose.aws.yaml -f deploy/validation/compose.validation.yaml build
-          docker compose -p "$TG_VERIFY_PROJECT" -f deploy/aws/compose.aws.yaml -f deploy/validation/compose.validation.yaml up -d ollama
+          docker compose -p "$TG_VERIFY_PROJECT" -f deploy/aws/compose.aws.yaml -f deploy/validation/compose.validation.yaml up -d --wait --wait-timeout 120 ollama
           docker compose -p "$TG_VERIFY_PROJECT" -f deploy/aws/compose.aws.yaml -f deploy/validation/compose.validation.yaml exec -T ollama ollama pull qwen3:1.7b
           docker compose -p "$TG_VERIFY_PROJECT" -f deploy/aws/compose.aws.yaml -f deploy/validation/compose.validation.yaml up -d --wait --wait-timeout 180
           for attempt in $(seq 1 30); do

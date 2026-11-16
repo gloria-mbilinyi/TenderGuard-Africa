@@ -145,7 +145,7 @@ python3 deploy/aws/configure_env.py --domain ACTUAL_DNS_HOSTNAME --email YOUR_TL
 cd deploy/aws
 sudo docker compose --env-file .env -f compose.aws.yaml config --quiet
 sudo docker compose --env-file .env -f compose.aws.yaml build
-sudo docker compose --env-file .env -f compose.aws.yaml up -d ollama
+sudo docker compose --env-file .env -f compose.aws.yaml up -d --wait --wait-timeout 120 ollama
 sudo docker compose --env-file .env -f compose.aws.yaml exec ollama ollama pull qwen3:1.7b
 sudo docker compose --env-file .env -f compose.aws.yaml up -d
 sudo docker compose --env-file .env -f compose.aws.yaml ps
