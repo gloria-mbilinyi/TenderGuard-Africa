@@ -8,6 +8,9 @@ if [[ "${1:-}" != "--expected-instance-id" || ! "${2:-}" =~ ^i-[a-f0-9]{8,17}$ |
   exit 2
 fi
 expected_instance="$2"
+[[ "$expected_instance" != i-0b8d60a2621893ac1 ]] || {
+  printf '%s\n' 'Protected host mwalimulens-demo must never be modified.' >&2; exit 2;
+}
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 [[ "$EUID" -eq 0 ]] || { printf '%s\n' 'Run with sudo on the approved EC2 instance.' >&2; exit 2; }
 source /etc/os-release

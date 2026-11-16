@@ -139,17 +139,20 @@ sudo bash deploy/aws/bootstrap_ubuntu.sh --expected-instance-id i-NEW_APPROVED_I
 python3 deploy/aws/configure_env.py --domain ACTUAL_DNS_HOSTNAME --email YOUR_TLS_NOTIFICATION_EMAIL
 ```
 
-6. Validate without printing interpolated secrets, then build/pull/start:
+6. Validate without printing interpolated secrets, then run the guarded deployment
+   procedure from the repository root. The command refuses the protected existing
+   instance, verifies IMDSv2 identity and Stockholm region, and checks that the enabled,
+   persistent systemd cutoff matches launch plus eight hours before every mutation:
 
 ```bash
-cd deploy/aws
-sudo docker compose --env-file .env -f compose.aws.yaml config --quiet
-sudo docker compose --env-file .env -f compose.aws.yaml build
-sudo docker compose --env-file .env -f compose.aws.yaml up -d --wait --wait-timeout 120 ollama
-sudo docker compose --env-file .env -f compose.aws.yaml exec ollama ollama pull qwen3:1.7b
-sudo docker compose --env-file .env -f compose.aws.yaml up -d
-sudo docker compose --env-file .env -f compose.aws.yaml ps
+sudo python3 -m deploy.aws.deploy_stack --check-only
+sudo python3 -m deploy.aws.deploy_stack --expected-instance-id i-NEW_APPROVED_ID
 ```
+
+The procedure builds the existing image, waits for Ollama health before pulling
+`qwen3:1.7b`, then waits for application/container health. A successful container
+start still requires the public HTTPS and PDF verification below. No AWS creation,
+credential export, resource deletion, or permission inference is performed.
 
 7. Verify the HTTPS URL, authentication failure and success, uploads, real evaluation,
    citations, `AWAITING_HUMAN_REVIEW`, null award, authorized CLI report, and download.
@@ -168,7 +171,7 @@ ID without printing report content or credentials. In a separate administrative 
 or SSM session on the new instance, authorize the draft only after reviewing findings:
 
 ```bash
-sudo docker compose --env-file .env -f compose.aws.yaml exec tenderguard \
+sudo docker compose --env-file deploy/aws/.env -f deploy/aws/compose.aws.yaml exec tenderguard \
   python -m app.agent.approve_documents --workspace EVL-WORKSPACE_ID --approved-by 'Named Reviewer'
 ```
 
