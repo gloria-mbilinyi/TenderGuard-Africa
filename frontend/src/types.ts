@@ -162,6 +162,12 @@ export interface EvaluationSummary {
 export interface ReportItem {
   filename: string;
   bid_id: string;
+  tender_title?: string | null;
+  supplier_names?: string[];
+  workspace_id?: string | null;
+  generated_at?: string | null;
+  approved_by?: string | null;
+  authorizer_identity_verified?: false;
   status: "DRAFT_FOR_COMMITTEE_REVIEW";
   size_bytes: number;
   modified_at: string;
